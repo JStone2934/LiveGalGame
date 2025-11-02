@@ -59,7 +59,7 @@ jobs:
           KEYSTORE_BASE64: ${{ secrets.KEYSTORE_BASE64 }} # 从 Secrets 读取 Base64
         run: |
           if [ -n "$KEYSTORE_BASE64" ]; then
-            echo $KEYSTORE_BASE64 | base64 --decode > release.keystore
+            echo "$KEYSTORE_BASE64" | base64 --decode > release.keystore
             echo "Keystore decoded"
           else
             echo "Keystore base64 secret not found"
