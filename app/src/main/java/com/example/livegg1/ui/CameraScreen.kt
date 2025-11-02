@@ -96,6 +96,7 @@ import android.provider.MediaStore
 import android.view.View
 import com.example.livegg1.R
 import kotlin.random.Random
+import kotlin.math.min
 import android.graphics.Canvas as AndroidCanvas
 
 @Composable
@@ -424,6 +425,19 @@ private fun CameraScreenContent(
     val hasChapterDrawable = remember(context) {
         context.resources.getIdentifier("chapter", "drawable", context.packageName) != 0
     }
+    val configuration = LocalConfiguration.current
+    val referenceWidth = 853f
+    val referenceHeight = 480f
+    val widthRatio = configuration.screenWidthDp.toFloat() / referenceWidth
+    val heightRatio = configuration.screenHeightDp.toFloat() / referenceHeight
+    val scaleBase = min(widthRatio, heightRatio)
+    val scaleFactor = (scaleBase * 1.25f).coerceIn(0.85f, 1.75f)
+
+    val heartSize = (40f * scaleFactor).dp
+    val heartOffsetScaled = heartOffsetY * scaleFactor
+    val spacerHeight = (4f * scaleFactor).dp
+    val affectionBarHeight = (180f * scaleFactor).dp
+    val affectionBarWidth = (24f * scaleFactor).dp
 
     Box(modifier = Modifier.fillMaxSize()) {
         // 1. 摄像头预览或占位图一直在最底层
@@ -445,14 +459,16 @@ private fun CameraScreenContent(
             )
             HeartIcon(
                 modifier = Modifier
-                    .size(40.dp)
-                    .offset(y = heartOffsetY)
+                    .size(heartSize)
+                    .offset(y = heartOffsetScaled)
                     .zIndex(1f)
             )
-            Spacer(modifier = Modifier.height(4.dp))
+            Spacer(modifier = Modifier.height(spacerHeight))
             AffectionBar(
                 affectionLevel = affectionLevel,
-                modifier = Modifier.zIndex(0f)
+                modifier = Modifier.zIndex(0f),
+                barHeight = affectionBarHeight,
+                barWidth = affectionBarWidth
             )
         }
 
@@ -540,7 +556,7 @@ private fun CameraScreenContent(
             ) {}
 
             // 进度条 + 倒计时（右下角，宽度为屏幕的 1/6）
-            val screenWidthDp = LocalConfiguration.current.screenWidthDp.dp
+            val screenWidthDp = configuration.screenWidthDp.dp
             val progressWidth = (screenWidthDp / 8)
             Row(
                 modifier = Modifier
