@@ -9,4 +9,6 @@ APP在/release文件夹中可以直接下载，报毒是正常状况，请放心
 
 现在的软件在/release下，功能更完整的版本会后续发布
 
+CSDN下载链接：https://download.csdn.net/download/qq_63533710/92237453
+
 ## 欢迎自由开发，有活你就直接往里加
