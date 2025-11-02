@@ -342,6 +342,7 @@ fun CameraScreen(
         chapterTitle = chapterTitle,
         previewView = { AndroidView({ previewView }, modifier = Modifier.fillMaxSize()) },
         affectionLevel = affectionLevel,
+        heartOffsetY = 12.dp,
         onManageTriggers = onManageTriggers
     )
 }
@@ -358,6 +359,7 @@ private fun CameraScreenContent(
     chapterTitle: String,
     previewView: @Composable () -> Unit,
     affectionLevel: Float,
+    heartOffsetY: Dp = 8.dp,
     onManageTriggers: () -> Unit = {}
 ) {
     val context = LocalContext.current
@@ -383,8 +385,12 @@ private fun CameraScreenContent(
                 fontSize = 12.sp,
                 modifier = Modifier.padding(bottom = 8.dp)
             )
-            HeartIcon(modifier = Modifier.size(40.dp))
-            Spacer(modifier = Modifier.height(8.dp))
+            HeartIcon(
+                modifier = Modifier
+                    .size(40.dp)
+                    .offset(y = heartOffsetY)
+            )
+            Spacer(modifier = Modifier.height(4.dp))
             AffectionBar(affectionLevel = affectionLevel)
         }
 
