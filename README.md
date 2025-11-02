@@ -1,11 +1,17 @@
 # 和女生聊天时能像GalGame一样有选项和字幕的神人应用
 有GalGame玩家反映和女生说话时不会弹出字幕与对话框，针对这种症状开发了这个APP
 
+<img width="2834" height="1641" alt="image" src="https://github.com/user-attachments/assets/d6c44e31-8362-4825-9d7c-a760a4720133" />
+
+
 作为整活向APP，目前没有接入AI，可以离线运行
 
 APP在/release文件夹中可以直接下载，报毒是正常状况，请放心使用
 
 目前检测到提问时会弹出对话框，后续可以加更好玩的功能
+
+<img width="2533" height="1427" alt="image" src="https://github.com/user-attachments/assets/65dd6c6f-bf47-4bc0-9695-034c7faa290d" />
+
 
 现在的软件在/release下，功能更完整的版本会后续发布
 
