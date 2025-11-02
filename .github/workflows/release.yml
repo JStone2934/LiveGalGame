@@ -1,0 +1,163 @@
+name: Release Build
+
+on:
+  push:
+    branches: [ main, master ]
+    tags:
+      - 'v*'
+  pull_request:
+    branches: [ main, master ]
+  workflow_dispatch:
+    inputs:
+      create_release:
+        description: 'Create GitHub Release'
+        required: false
+        type: boolean
+        default: false
+
+concurrency:
+  group: release-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: write
+
+jobs:
+  build:
+    name: Build APK
+    runs-on: ubuntu-latest
+    
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Setup JDK 17
+        uses: actions/setup-java@v4
+        with:
+          distribution: 'temurin'
+          java-version: '17'
+          cache: 'gradle'
+
+      - name: Grant execute permission for gradlew
+        run: chmod +x gradlew
+
+      - name: Extract version information
+        id: version
+        run: |
+          VERSION_NAME=$(grep 'versionName = ' app/build.gradle.kts | sed 's/.*versionName = "\(.*\)"/\1/')
+          VERSION_CODE=$(grep 'versionCode = ' app/build.gradle.kts | sed 's/.*versionCode = \([0-9]*\)/\1/')
+          
+          echo "VERSION_NAME=${VERSION_NAME}" >> $GITHUB_OUTPUT
+          echo "VERSION_CODE=${VERSION_CODE}" >> $GITHUB_OUTPUT
+          echo "Building version: ${VERSION_NAME} (${VERSION_CODE})"
+
+      # 从 Base64 Secret 解码 Keystore 文件
+      - name: Decode keystore
+        env:
+          KEYSTORE_BASE64: ${{ secrets.KEYSTORE_BASE64 }} # 从 Secrets 读取 Base64
+        run: |
+          if [ -n "$KEYSTORE_BASE64" ]; then
+            echo $KEYSTORE_BASE64 | base64 --decode > release.keystore
+            echo "Keystore decoded"
+          else
+            echo "Keystore base64 secret not found"
+          fi
+
+      - name: Setup signing configuration
+        env:
+          KEYSTORE_PASSWORD: ${{ secrets.KEYSTORE_PASSWORD }}
+          KEY_ALIAS: ${{ secrets.KEY_ALIAS }}
+          KEY_PASSWORD: ${{ secrets.KEY_PASSWORD }}
+        run: |
+          if [ -n "$KEYSTORE_PASSWORD" ]; then
+            cat > signing.properties << EOF
+          keystore.path=release.keystore
+          keystore.password=$KEYSTORE_PASSWORD
+          key.alias=$KEY_ALIAS
+          key.password=$KEY_PASSWORD
+          EOF
+            echo "Signing configuration created"
+          else
+            echo "No keystore credentials found, building without signing"
+          fi
+
+      - name: Build release APK
+        run: |
+          ./gradlew assembleRelease \
+            --no-daemon \
+            --stacktrace \
+            --warning-mode all
+
+      - name: Get APK info
+        id: apk_info
+        run: |
+          cd app/build/outputs/apk/release
+          APK_FILE=$(ls *.apk | head -n 1)
+          APK_SIZE=$(du -h "$APK_FILE" | cut -f1)
+          APK_SHA256=$(sha256sum "$APK_FILE" | cut -d' ' -f1)
+          
+          echo "APK_FILE=${APK_FILE}" >> $GITHUB_OUTPUT
+          echo "APK_SIZE=${APK_SIZE}" >> $GITHUB_OUTPUT
+          echo "APK_SHA256=${APK_SHA256}" >> $GITHUB_OUTPUT
+          
+          echo "APK: ${APK_FILE}"
+          echo "Size: ${APK_SIZE}"
+          echo "SHA256: ${APK_SHA256}"
+
+      - name: Rename APK
+        run: |
+          cd app/build/outputs/apk/release
+          mv "${{ steps.apk_info.outputs.APK_FILE }}" "LiveGG-v${{ steps.version.outputs.VERSION_NAME }}.apk"
+
+      - name: Upload APK artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: LiveGG-v${{ steps.version.outputs.VERSION_NAME }}
+          path: app/build/outputs/apk/release/*.apk
+          retention-days: 30
+          compression-level: 0
+
+      - name: Cleanup sensitive files
+        if: always()
+        run: rm -f signing.properties release.keystore # 确保两个文件都被删除
+
+  release:
+    name: Create GitHub Release
+    needs: build
+    runs-on: ubuntu-latest
+    if: |
+      (github.event_name == 'push' && startsWith(github.ref, 'refs/tags/v')) ||
+      (github.event_name == 'workflow_dispatch' && github.event.inputs.create_release == 'true')
+    
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Extract version information
+        id: version
+        run: |
+          VERSION_NAME=$(grep 'versionName = ' app/build.gradle.kts | sed 's/.*versionName = "\(.*\)"/\1/')
+          echo "VERSION_NAME=${VERSION_NAME}" >> $GITHUB_OUTPUT
+
+      - name: Download APK artifact
+        uses: actions/download-artifact@v4
+        with:
+          name: LiveGG-v${{ steps.version.outputs.VERSION_NAME }}
+          path: release-artifacts
+
+      - name: Create GitHub Release
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: v${{ steps.version.outputs.VERSION_NAME }}
+          name: LiveGG v${{ steps.version.outputs.VERSION_NAME }}
+          body_path: CHANGELOG.md
+          files: release-artifacts/*.apk
+          draft: false
+          prerelease: false
+          make_latest: true
+          generate_release_notes: true
+          fail_on_unmatched_files: false
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

@@ -1,3 +1,6 @@
+import java.util.Properties
+import java.io.FileInputStream
+
 plugins {
     alias(libs.plugins.android.application)
     alias(libs.plugins.kotlin.android)
@@ -18,6 +21,22 @@ android {
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
     }
 
+    // --- 第 2 处修改：在这里添加 signingConfigs 整个代码块 ---
+    signingConfigs {
+        val keystorePropsFile = rootProject.file("signing.properties")
+        if (keystorePropsFile.exists()) {
+            create("release") {
+                val props = Properties().apply {
+                    FileInputStream(keystorePropsFile).use { load(it) }
+                }
+                storeFile = rootProject.file(props.getProperty("keystore.path") ?: "release.keystore")
+                storePassword = props.getProperty("keystore.password")
+                keyAlias = props.getProperty("key.alias")
+                keyPassword = props.getProperty("key.password")
+            }
+        }
+    }
+
     buildTypes {
         release {
             isMinifyEnabled = false
@@ -25,6 +44,8 @@ android {
                 getDefaultProguardFile("proguard-android-optimize.txt"),
                 "proguard-rules.pro"
             )
+            // --- 第 3 处修改：在这里添加这一行 ---
+            signingConfig = signingConfigs.getByName("release")
         }
     }
     compileOptions {
