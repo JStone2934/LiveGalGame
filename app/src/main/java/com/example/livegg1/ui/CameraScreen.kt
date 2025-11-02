@@ -91,7 +91,8 @@ fun CameraScreen(
     chapterTitle: String = "Chapter 1",
     onRecognizedText: (text: String, isFinal: Boolean) -> Unit = { _, _ -> },
     isDialogVisible: Boolean = false,
-    idleBgmAsset: String = "bgm.mp3"
+    idleBgmAsset: String = "bgm.mp3",
+    onManageTriggers: () -> Unit = {}
 ) {
     val context = LocalContext.current
     val lifecycleOwner = LocalLifecycleOwner.current
@@ -329,7 +330,8 @@ fun CameraScreen(
         progress = progress,
         timeRemainingSec = timeRemainingSec,
         chapterTitle = chapterTitle,
-        previewView = { AndroidView({ previewView }, modifier = Modifier.fillMaxSize()) }
+        previewView = { AndroidView({ previewView }, modifier = Modifier.fillMaxSize()) },
+        onManageTriggers = onManageTriggers
     )
 }
 
@@ -343,7 +345,8 @@ private fun CameraScreenContent(
     rectOffsetX: Dp = 4.dp,
     rectOffsetY: Dp = 10.dp,
     chapterTitle: String,
-    previewView: @Composable () -> Unit
+    previewView: @Composable () -> Unit,
+    onManageTriggers: () -> Unit = {}
 ) {
     val context = LocalContext.current
     val hasChapterDrawable = remember(context) {
@@ -556,7 +559,10 @@ private fun CameraScreenContent(
                     }
 
                     // SVG 图像按钮（image2.svg 对应的资源名假定为 R.drawable.image2）
-                    TextButton(onClick = { Log.d("CameraScreen", "Image button clicked") }, contentPadding = PaddingValues(horizontal = 4.dp, vertical = 0.dp), modifier = Modifier.height(btnHeight)) {
+                    TextButton(onClick = {
+                        Log.d("CameraScreen", "Image button clicked")
+                        onManageTriggers()
+                    }, contentPadding = PaddingValues(horizontal = 4.dp, vertical = 0.dp), modifier = Modifier.height(btnHeight)) {
                         Image(
                             painter = painterResource(id = R.drawable.image2),
                             contentDescription = "image2",
@@ -609,7 +615,8 @@ fun CameraScreenPreview() {
             chapterTitle = "Chapter 1-2",
             previewView = {
                 Box(modifier = Modifier.fillMaxSize().background(Color.DarkGray))
-            }
+            },
+            onManageTriggers = {}
         )
     }
 }

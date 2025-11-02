@@ -25,6 +25,9 @@ import androidx.lifecycle.LifecycleEventObserver
 import androidx.lifecycle.compose.LocalLifecycleOwner
 import kotlinx.coroutines.flow.collect
 import com.example.livegg1.dialog.KeywordDialog
+import com.example.livegg1.dialog.TriggerManagementDialog
+import com.example.livegg1.model.DialogType
+import com.example.livegg1.model.KeywordTrigger
 import com.example.livegg1.speech.KeywordSpeechListener
 import com.example.livegg1.ui.CameraScreen
 import com.example.livegg1.ui.theme.LiveGG1Theme
@@ -78,13 +81,40 @@ class MainActivity : ComponentActivity() {
                 val allPermissionsGranted = permissionsGranted.all { it.value }
                 if (allPermissionsGranted) {
                     val lifecycleOwner = LocalLifecycleOwner.current
-                    val speechListener = remember { KeywordSpeechListener(keyword = "吗") }
+                    var triggers by remember {
+                        mutableStateOf(
+                            listOf(KeywordTrigger(keyword = "吗", dialogType = DialogType.CHOICE_DIALOG))
+                        )
+                    }
+                    val speechListener = remember { KeywordSpeechListener(initialTriggers = triggers) }
                     var showKeywordDialog by remember { mutableStateOf(false) }
+                    var showTriggerDialog by remember { mutableStateOf(false) }
                     var idleBgmAsset by remember { mutableStateOf("bgm.mp3") }
+                    var activeTrigger by remember { mutableStateOf<KeywordTrigger?>(null) }
+
+                    fun restartListeningIfPossible() {
+                        if (lifecycleOwner.lifecycle.currentState.isAtLeast(Lifecycle.State.STARTED)) {
+                            speechListener.startListening()
+                        }
+                    }
+
+                    LaunchedEffect(triggers) {
+                        speechListener.updateTriggers(triggers)
+                    }
+
+                    LaunchedEffect(showTriggerDialog, speechListener) {
+                        if (showTriggerDialog) {
+                            speechListener.stopListening()
+                        } else if (!showKeywordDialog) {
+                            restartListeningIfPossible()
+                        }
+                    }
 
                     LaunchedEffect(speechListener) {
-                        speechListener.keywordTriggers.collect {
+                        speechListener.keywordTriggers.collect { trigger ->
+                            Log.d("MainActivity", "Keyword triggered: ${trigger.keyword}")
                             speechListener.stopListening()
+                            activeTrigger = trigger
                             showKeywordDialog = true
                         }
                     }
@@ -109,29 +139,88 @@ class MainActivity : ComponentActivity() {
                         onRecognizedText = { text, isFinal ->
                             speechListener.onRecognizedText(text, isFinal)
                         },
-                        isDialogVisible = showKeywordDialog,
-                        idleBgmAsset = idleBgmAsset
+                        isDialogVisible = showKeywordDialog || showTriggerDialog,
+                        idleBgmAsset = idleBgmAsset,
+                        onManageTriggers = {
+                            speechListener.stopListening()
+                            showTriggerDialog = true
+                        }
                     )
 
                     if (showKeywordDialog) {
                         KeywordDialog(
                             onAccept = {
-                                Log.d("MainActivity", "Keyword accepted")
+                                Log.d("MainActivity", "Keyword accepted: ${activeTrigger?.keyword}")
                                 idleBgmAsset = "Ah.mp3"
                                 showKeywordDialog = false
-                                speechListener.startListening()
+                                activeTrigger = null
+                                if (!showTriggerDialog) {
+                                    restartListeningIfPossible()
+                                }
                             },
                             onReject = {
-                                Log.d("MainActivity", "Keyword rejected")
+                                Log.d("MainActivity", "Keyword rejected: ${activeTrigger?.keyword}")
                                 idleBgmAsset = "casual.mp3"
                                 showKeywordDialog = false
-                                speechListener.startListening()
+                                activeTrigger = null
+                                if (!showTriggerDialog) {
+                                    restartListeningIfPossible()
+                                }
                             },
                             onDismiss = {
                                 showKeywordDialog = false
-                                speechListener.startListening()
+                                activeTrigger = null
+                                if (!showTriggerDialog) {
+                                    restartListeningIfPossible()
+                                }
                             },
                             onSelectBgm = { asset -> idleBgmAsset = asset }
+                        )
+                    }
+
+                    if (showTriggerDialog) {
+                        TriggerManagementDialog(
+                            triggers = triggers,
+                            onAddTrigger = { keyword, dialogType ->
+                                val cleaned = keyword.trim()
+                                val duplicate = triggers.any { it.keyword.equals(cleaned, ignoreCase = true) }
+                                if (cleaned.isEmpty()) {
+                                    Log.w("MainActivity", "Attempted to add empty keyword")
+                                } else if (duplicate) {
+                                    Log.w("MainActivity", "Keyword already exists: $cleaned")
+                                } else {
+                                    val newTrigger = KeywordTrigger(keyword = cleaned, dialogType = dialogType)
+                                    Log.d("MainActivity", "Keyword added: ${newTrigger.keyword}")
+                                    triggers = triggers + newTrigger
+                                }
+                            },
+                            onUpdateTrigger = { original, updated ->
+                                val cleaned = updated.keyword.trim()
+                                val duplicate = triggers.any {
+                                    it.id != original.id && it.keyword.equals(cleaned, ignoreCase = true)
+                                }
+                                if (cleaned.isEmpty()) {
+                                    Log.w("MainActivity", "Attempted to update keyword to empty value")
+                                } else if (duplicate) {
+                                    Log.w("MainActivity", "Keyword already exists: $cleaned")
+                                } else {
+                                    val sanitized = updated.copy(keyword = cleaned)
+                                    Log.d("MainActivity", "Keyword updated: ${sanitized.keyword}")
+                                    triggers = triggers.map { existing ->
+                                        if (existing.id == original.id) sanitized else existing
+                                    }
+                                }
+                            },
+                            onDeleteTrigger = { trigger ->
+                                Log.d("MainActivity", "Keyword deleted: ${trigger.keyword}")
+                                triggers = triggers.filterNot { it.id == trigger.id }
+                            },
+                            onDismiss = {
+                                showTriggerDialog = false
+                                if (!showKeywordDialog) {
+                                    restartListeningIfPossible()
+                                }
+                            }
                         )
                     }
                 } else {

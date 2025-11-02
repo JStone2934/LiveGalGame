@@ -1,17 +1,24 @@
 package com.example.livegg1.speech
 
+import com.example.livegg1.model.KeywordTrigger
 import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.SharedFlow
 
 class KeywordSpeechListener(
-    private val keyword: String = "吗"
+    initialTriggers: List<KeywordTrigger> = emptyList()
 ) {
 
-    private val _keywordTriggers = MutableSharedFlow<Unit>(extraBufferCapacity = 1)
-    val keywordTriggers: SharedFlow<Unit> = _keywordTriggers
+    private val _keywordTriggers = MutableSharedFlow<KeywordTrigger>(extraBufferCapacity = 1)
+    val keywordTriggers: SharedFlow<KeywordTrigger> = _keywordTriggers
 
     private var isListening: Boolean = false
     private var lastTriggeredHash: Int? = null
+    private var triggers: List<KeywordTrigger> = initialTriggers
+
+    fun updateTriggers(updated: List<KeywordTrigger>) {
+        triggers = updated
+        lastTriggeredHash = null
+    }
 
     fun startListening() {
         isListening = true
@@ -31,12 +38,14 @@ class KeywordSpeechListener(
         if (!isListening) return
         val normalized = text.trim()
         if (normalized.isEmpty()) return
-        if (!normalized.contains(keyword)) return
 
-        val hash = 31 * normalized.hashCode() + if (isFinal) 1 else 0
+        val matched = triggers.firstOrNull { normalized.contains(it.keyword) } ?: return
+
+        val baseHash = 31 * normalized.hashCode() + matched.keyword.hashCode()
+        val hash = 31 * baseHash + if (isFinal) 1 else 0
         if (hash == lastTriggeredHash) return
 
         lastTriggeredHash = hash
-        _keywordTriggers.tryEmit(Unit)
+        _keywordTriggers.tryEmit(matched)
     }
 }
