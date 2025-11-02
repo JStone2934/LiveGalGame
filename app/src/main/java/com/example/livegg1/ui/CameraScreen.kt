@@ -98,7 +98,9 @@ fun CameraScreen(
     onRecognizedText: (text: String, isFinal: Boolean) -> Unit = { _, _ -> },
     isDialogVisible: Boolean = false,
     idleBgmAsset: String = "bgm.mp3",
-    onManageTriggers: () -> Unit = {}
+    onManageTriggers: () -> Unit = {},
+    affectionEventId: Long = 0L,
+    affectionEventDelta: Float = 0f
 ) {
     val context = LocalContext.current
     val lifecycleOwner = LocalLifecycleOwner.current
@@ -131,6 +133,12 @@ fun CameraScreen(
         while (isActive) {
             delay(decayIntervalMs)
             affectionLevel = (affectionLevel - decayStep).coerceIn(0f, 1f)
+        }
+    }
+
+    LaunchedEffect(affectionEventId) {
+        if (affectionEventId > 0L) {
+            affectionLevel = (affectionLevel + affectionEventDelta).coerceIn(0f, 1f)
         }
     }
 // 好感度提高速度

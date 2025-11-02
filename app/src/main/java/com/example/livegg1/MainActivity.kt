@@ -14,6 +14,7 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableLongStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
@@ -91,6 +92,13 @@ class MainActivity : ComponentActivity() {
                     var showTriggerDialog by remember { mutableStateOf(false) }
                     var idleBgmAsset by remember { mutableStateOf("bgm.mp3") }
                     var activeTrigger by remember { mutableStateOf<KeywordTrigger?>(null) }
+                    var affectionEventId by remember { mutableLongStateOf(0L) }
+                    var affectionEventDelta by remember { mutableStateOf(0f) }
+
+                    fun queueAffectionChange(delta: Float) {
+                        affectionEventDelta = delta
+                        affectionEventId++
+                    }
 
                     fun restartListeningIfPossible() {
                         if (lifecycleOwner.lifecycle.currentState.isAtLeast(Lifecycle.State.STARTED)) {
@@ -141,10 +149,12 @@ class MainActivity : ComponentActivity() {
                         },
                         isDialogVisible = showKeywordDialog || showTriggerDialog,
                         idleBgmAsset = idleBgmAsset,
-                        onManageTriggers = {
+                            onManageTriggers = {
                             speechListener.stopListening()
                             showTriggerDialog = true
-                        }
+                            },
+                            affectionEventId = affectionEventId,
+                            affectionEventDelta = affectionEventDelta
                     )
 
                     if (showKeywordDialog) {
@@ -152,6 +162,7 @@ class MainActivity : ComponentActivity() {
                             onAccept = {
                                 Log.d("MainActivity", "Keyword accepted: ${activeTrigger?.keyword}")
                                 idleBgmAsset = "Ah.mp3"
+                                queueAffectionChange(-0.4f)
                                 showKeywordDialog = false
                                 activeTrigger = null
                                 if (!showTriggerDialog) {
@@ -161,6 +172,7 @@ class MainActivity : ComponentActivity() {
                             onReject = {
                                 Log.d("MainActivity", "Keyword rejected: ${activeTrigger?.keyword}")
                                 idleBgmAsset = "casual.mp3"
+                                queueAffectionChange(0.4f)
                                 showKeywordDialog = false
                                 activeTrigger = null
                                 if (!showTriggerDialog) {
