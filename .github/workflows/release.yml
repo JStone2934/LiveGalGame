@@ -54,18 +54,22 @@ jobs:
           echo "Building version: ${VERSION_NAME} (${VERSION_CODE})"
 
       - name: Setup signing configuration
-        if: ${{ secrets.KEYSTORE_PASSWORD != '' }}
         env:
           KEYSTORE_PASSWORD: ${{ secrets.KEYSTORE_PASSWORD }}
           KEY_ALIAS: ${{ secrets.KEY_ALIAS }}
           KEY_PASSWORD: ${{ secrets.KEY_PASSWORD }}
         run: |
-          cat > signing.properties << EOF
+          if [ -n "$KEYSTORE_PASSWORD" ]; then
+            cat > signing.properties << EOF
           keystore.path=release.keystore
           keystore.password=$KEYSTORE_PASSWORD
           key.alias=$KEY_ALIAS
           key.password=$KEY_PASSWORD
           EOF
+            echo "Signing configuration created"
+          else
+            echo "No keystore credentials found, building without signing"
+          fi
 
       - name: Build release APK
         run: |
