@@ -140,7 +140,7 @@ private fun TriggerItem(
                 if (trigger.dialogType == DialogType.CHOICE_DIALOG) {
                     trigger.options.forEachIndexed { index, option ->
                         Text(
-                            text = "选项${index + 1}: \"${option.label}\" | BGM: ${option.bgmAsset} | Δ好感: ${option.affectionDelta}",
+                            text = "选项${index + 1}: \"${option.label}\" | BGM: ${option.bgmAsset} | Δ好感: ${option.affectionDelta} | 白屏: ${if (option.triggerWhiteFlash) "是" else "否"}",
                             style = MaterialTheme.typography.bodySmall,
                             color = MaterialTheme.colorScheme.onSurfaceVariant
                         )
@@ -178,7 +178,8 @@ private fun AddOrEditTriggerDialog(
                         id = option.id,
                         label = option.label,
                         bgmAsset = option.bgmAsset,
-                        affectionDelta = option.affectionDelta.toString()
+                                affectionDelta = option.affectionDelta.toString(),
+                                triggerWhiteFlash = option.triggerWhiteFlash
                     )
                 )
             }
@@ -274,7 +275,8 @@ private fun AddOrEditTriggerDialog(
                                 OptionFormState(
                                     label = "选项${optionStates.size + 1}",
                                     bgmAsset = "",
-                                    affectionDelta = "0.0"
+                                    affectionDelta = "0.0",
+                                    triggerWhiteFlash = false
                                 )
                             )
                             optionCountError = false
@@ -331,7 +333,8 @@ private fun AddOrEditTriggerDialog(
                                 id = option.id,
                                 label = trimmedLabel.ifEmpty { option.label },
                                 bgmAsset = trimmedBgm.ifEmpty { option.bgmAsset },
-                                affectionDelta = deltaValue ?: 0f
+                                affectionDelta = deltaValue ?: 0f,
+                                triggerWhiteFlash = option.triggerWhiteFlash
                             )
                         }
                     } else {
@@ -360,6 +363,7 @@ private data class OptionFormState(
     val label: String,
     val bgmAsset: String,
     val affectionDelta: String,
+    val triggerWhiteFlash: Boolean = false,
     val labelError: Boolean = false,
     val bgmError: Boolean = false,
     val affectionError: Boolean = false
@@ -428,6 +432,20 @@ private fun OptionEditor(
                     "BGM 文件名不能为空",
                     color = MaterialTheme.colorScheme.error,
                     style = MaterialTheme.typography.bodySmall
+                )
+            }
+
+            Spacer(Modifier.height(8.dp))
+
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Text("触发白屏", style = MaterialTheme.typography.bodyMedium)
+                Switch(
+                    checked = state.triggerWhiteFlash,
+                    onCheckedChange = { onStateChange(state.copy(triggerWhiteFlash = it)) }
                 )
             }
 

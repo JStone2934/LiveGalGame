@@ -12,7 +12,8 @@ data class TriggerOption(
     val id: String = UUID.randomUUID().toString(),
     val label: String,
     val bgmAsset: String,
-    val affectionDelta: Float
+    val affectionDelta: Float,
+    val triggerWhiteFlash: Boolean = false
 )
 
 // 数据类，用于存储一个完整的触发器规则
@@ -26,8 +27,8 @@ data class KeywordTrigger(
 object TriggerDefaults {
     fun defaultOptions(dialogType: DialogType): List<TriggerOption> = when (dialogType) {
         DialogType.CHOICE_DIALOG -> listOf(
-            TriggerOption(label = "好啊好啊", bgmAsset = "casual.mp3", affectionDelta = 0.4f),
-            TriggerOption(label = "不了", bgmAsset = "Ah.mp3", affectionDelta = -0.4f)
+            TriggerOption(label = "好啊好啊", bgmAsset = "casual.mp3", affectionDelta = 0.4f, triggerWhiteFlash = false),
+            TriggerOption(label = "不了", bgmAsset = "Ah.mp3", affectionDelta = -0.4f, triggerWhiteFlash = false)
         )
     }
 }

@@ -94,10 +94,15 @@ class MainActivity : ComponentActivity() {
                     var activeTrigger by remember { mutableStateOf<KeywordTrigger?>(null) }
                     var affectionEventId by remember { mutableLongStateOf(0L) }
                     var affectionEventDelta by remember { mutableStateOf(0f) }
+                    var whiteFlashEventId by remember { mutableLongStateOf(0L) }
 
                     fun queueAffectionChange(delta: Float) {
                         affectionEventDelta = delta
                         affectionEventId++
+                    }
+
+                    fun triggerWhiteFlash() {
+                        whiteFlashEventId++
                     }
 
                     fun restartListeningIfPossible() {
@@ -149,12 +154,13 @@ class MainActivity : ComponentActivity() {
                         },
                         isDialogVisible = showKeywordDialog || showTriggerDialog,
                         idleBgmAsset = idleBgmAsset,
-                            onManageTriggers = {
+                        onManageTriggers = {
                             speechListener.stopListening()
                             showTriggerDialog = true
-                            },
-                            affectionEventId = affectionEventId,
-                            affectionEventDelta = affectionEventDelta
+                        },
+                        affectionEventId = affectionEventId,
+                        affectionEventDelta = affectionEventDelta,
+                        whiteFlashEventId = whiteFlashEventId
                     )
 
                     if (showKeywordDialog) {
@@ -168,6 +174,9 @@ class MainActivity : ComponentActivity() {
                                     )
                                     idleBgmAsset = option.bgmAsset
                                     queueAffectionChange(option.affectionDelta)
+                                    if (option.triggerWhiteFlash) {
+                                        triggerWhiteFlash()
+                                    }
                                     showKeywordDialog = false
                                     activeTrigger = null
                                     if (!showTriggerDialog) {

@@ -114,7 +114,8 @@ fun CameraScreen(
     idleBgmAsset: String = "bgm.mp3",
     onManageTriggers: () -> Unit = {},
     affectionEventId: Long = 0L,
-    affectionEventDelta: Float = 0f
+    affectionEventDelta: Float = 0f,
+    whiteFlashEventId: Long = 0L
 ) {
     val context = LocalContext.current
     val lifecycleOwner = LocalLifecycleOwner.current
@@ -142,6 +143,7 @@ fun CameraScreen(
         val max = 2f / 3f
         mutableStateOf(min + Random.nextFloat() * (max - min))
     }
+    var flashAlpha by remember { mutableStateOf(0f) }
 
     LaunchedEffect(isInForeground) {
         if (!isInForeground) return@LaunchedEffect
@@ -156,6 +158,23 @@ fun CameraScreen(
     LaunchedEffect(affectionEventId) {
         if (affectionEventId > 0L) {
             affectionLevel = (affectionLevel + affectionEventDelta).coerceIn(0f, 1f)
+        }
+    }
+
+    LaunchedEffect(whiteFlashEventId) {
+        if (whiteFlashEventId > 0L) {
+            // Quick double-flash: 0.3s on, 0.5s off, 0.3s on.
+            flashAlpha = 1f
+            delay(300)
+            flashAlpha = 0f
+            delay(500)
+            flashAlpha = 1f
+            delay(300)
+            flashAlpha = 0f
+            delay(600)
+            flashAlpha = 1f
+            delay(300)
+            flashAlpha = 0f
         }
     }
 // 好感度提高速度
@@ -442,7 +461,8 @@ fun CameraScreen(
         previewView = { AndroidView({ previewView }, modifier = Modifier.fillMaxSize()) },
         affectionLevel = affectionLevel,
         onSaveSnapshot = ::saveCurrentScreen,
-        onManageTriggers = onManageTriggers
+        onManageTriggers = onManageTriggers,
+        flashAlpha = flashAlpha
     )
 }
 
@@ -459,7 +479,8 @@ private fun CameraScreenContent(
     previewView: @Composable () -> Unit,
     affectionLevel: Float,
     onSaveSnapshot: (String) -> Unit = {},
-    onManageTriggers: () -> Unit = {}
+    onManageTriggers: () -> Unit = {},
+    flashAlpha: Float = 0f
 ) {
     val context = LocalContext.current
     val hasChapterDrawable = remember(context) {
@@ -764,6 +785,15 @@ private fun CameraScreenContent(
                     }
             }
         }
+
+        if (flashAlpha > 0f) {
+            Box(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .background(Color.White.copy(alpha = flashAlpha))
+                    .zIndex(10f)
+            )
+        }
     }
 }
 
@@ -839,7 +869,8 @@ fun CameraScreenPreview() {
             },
             affectionLevel = 0.55f,
             onSaveSnapshot = {},
-            onManageTriggers = {}
+            onManageTriggers = {},
+            flashAlpha = 0f
         )
     }
 }
