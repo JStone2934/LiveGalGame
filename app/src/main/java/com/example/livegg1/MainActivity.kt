@@ -160,22 +160,14 @@ class MainActivity : ComponentActivity() {
                     if (showKeywordDialog) {
                         activeTrigger?.let { trigger ->
                             KeywordDialog(
-                                primaryOptionLabel = trigger.primaryOptionText,
-                                secondaryOptionLabel = trigger.secondaryOptionText,
-                                onPrimarySelected = {
-                                    Log.d("MainActivity", "Keyword rejected: ${trigger.keyword}")
-                                    idleBgmAsset = "casual.mp3"
-                                    queueAffectionChange(0.4f)
-                                    showKeywordDialog = false
-                                    activeTrigger = null
-                                    if (!showTriggerDialog) {
-                                        restartListeningIfPossible()
-                                    }
-                                },
-                                onSecondarySelected = {
-                                    Log.d("MainActivity", "Keyword accepted: ${trigger.keyword}")
-                                    idleBgmAsset = "Ah.mp3"
-                                    queueAffectionChange(-0.4f)
+                                options = trigger.options,
+                                onOptionSelected = { option ->
+                                    Log.d(
+                                        "MainActivity",
+                                        "Option selected: ${option.label} for keyword ${trigger.keyword}"
+                                    )
+                                    idleBgmAsset = option.bgmAsset
+                                    queueAffectionChange(option.affectionDelta)
                                     showKeywordDialog = false
                                     activeTrigger = null
                                     if (!showTriggerDialog) {
@@ -188,8 +180,7 @@ class MainActivity : ComponentActivity() {
                                     if (!showTriggerDialog) {
                                         restartListeningIfPossible()
                                     }
-                                },
-                                onSelectBgm = { asset -> idleBgmAsset = asset }
+                                }
                             )
                         }
                     }
@@ -197,7 +188,7 @@ class MainActivity : ComponentActivity() {
                     if (showTriggerDialog) {
                         TriggerManagementDialog(
                             triggers = triggers,
-                            onAddTrigger = { keyword, dialogType, primaryOptionText, secondaryOptionText ->
+                            onAddTrigger = { keyword, dialogType, options ->
                                 val cleaned = keyword.trim()
                                 val duplicate = triggers.any { it.keyword.equals(cleaned, ignoreCase = true) }
                                 if (cleaned.isEmpty()) {
@@ -205,11 +196,16 @@ class MainActivity : ComponentActivity() {
                                 } else if (duplicate) {
                                     Log.w("MainActivity", "Keyword already exists: $cleaned")
                                 } else {
+                                    val sanitizedOptions = options.map { option ->
+                                        option.copy(
+                                            label = option.label.trim().ifEmpty { option.label },
+                                            bgmAsset = option.bgmAsset.trim().ifEmpty { option.bgmAsset }
+                                        )
+                                    }
                                     val newTrigger = KeywordTrigger(
                                         keyword = cleaned,
                                         dialogType = dialogType,
-                                        primaryOptionText = primaryOptionText.trim().ifEmpty { primaryOptionText },
-                                        secondaryOptionText = secondaryOptionText.trim().ifEmpty { secondaryOptionText }
+                                        options = sanitizedOptions
                                     )
                                     Log.d("MainActivity", "Keyword added: ${newTrigger.keyword}")
                                     triggers = triggers + newTrigger
@@ -227,8 +223,12 @@ class MainActivity : ComponentActivity() {
                                 } else {
                                     val sanitized = updated.copy(
                                         keyword = cleaned,
-                                        primaryOptionText = updated.primaryOptionText.trim().ifEmpty { updated.primaryOptionText },
-                                        secondaryOptionText = updated.secondaryOptionText.trim().ifEmpty { updated.secondaryOptionText }
+                                        options = updated.options.map { option ->
+                                            option.copy(
+                                                label = option.label.trim().ifEmpty { option.label },
+                                                bgmAsset = option.bgmAsset.trim().ifEmpty { option.bgmAsset }
+                                            )
+                                        }
                                     )
                                     Log.d("MainActivity", "Keyword updated: ${sanitized.keyword}")
                                     triggers = triggers.map { existing ->

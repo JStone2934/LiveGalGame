@@ -7,6 +7,7 @@ import androidx.compose.foundation.verticalScroll
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.Delete
@@ -17,23 +18,24 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.window.Dialog
 import com.example.livegg1.model.DialogType
 import com.example.livegg1.model.KeywordTrigger
+import com.example.livegg1.model.TriggerDefaults
+import com.example.livegg1.model.TriggerOption
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun TriggerManagementDialog(
     triggers: List<KeywordTrigger>,
-    onAddTrigger: (keyword: String, dialogType: DialogType, primaryOptionText: String, secondaryOptionText: String) -> Unit,
+    onAddTrigger: (keyword: String, dialogType: DialogType, options: List<TriggerOption>) -> Unit,
     onUpdateTrigger: (original: KeywordTrigger, updated: KeywordTrigger) -> Unit,
     onDeleteTrigger: (trigger: KeywordTrigger) -> Unit,
     onDismiss: () -> Unit
 ) {
     var showAddOrEditDialog by remember { mutableStateOf<KeywordTrigger?>(null) }
-    // A dummy trigger to represent the "add" state
-    val addStateTrigger = KeywordTrigger(keyword = "", dialogType = DialogType.CHOICE_DIALOG)
 
     Dialog(onDismissRequest = onDismiss) {
         Card(
@@ -71,7 +73,9 @@ fun TriggerManagementDialog(
                     horizontalArrangement = Arrangement.SpaceBetween
                 ) {
                     Button(
-                        onClick = { showAddOrEditDialog = addStateTrigger },
+                        onClick = {
+                            showAddOrEditDialog = KeywordTrigger(keyword = "", dialogType = DialogType.CHOICE_DIALOG)
+                        },
                         colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.primary)
                     ) {
                         Icon(Icons.Default.Add, contentDescription = "添加")
@@ -91,7 +95,7 @@ fun TriggerManagementDialog(
         AddOrEditTriggerDialog(
             trigger = showAddOrEditDialog,
             isEditing = isEditing,
-            onConfirm = { keyword, dialogType, primaryOptionText, secondaryOptionText ->
+            onConfirm = { keyword, dialogType, options ->
                 if (isEditing) {
                     val original = showAddOrEditDialog!!
                     onUpdateTrigger(
@@ -99,12 +103,11 @@ fun TriggerManagementDialog(
                         original.copy(
                             keyword = keyword,
                             dialogType = dialogType,
-                            primaryOptionText = primaryOptionText,
-                            secondaryOptionText = secondaryOptionText
+                            options = options
                         )
                     )
                 } else {
-                    onAddTrigger(keyword, dialogType, primaryOptionText, secondaryOptionText)
+                    onAddTrigger(keyword, dialogType, options)
                 }
                 showAddOrEditDialog = null
             },
@@ -135,16 +138,13 @@ private fun TriggerItem(
                 Text(text = "关键词: \"${trigger.keyword}\"", fontWeight = FontWeight.SemiBold)
                 Text(text = "触发弹窗: ${trigger.dialogType.name}", style = MaterialTheme.typography.bodySmall)
                 if (trigger.dialogType == DialogType.CHOICE_DIALOG) {
-                    Text(
-                        text = "选项1: \"${trigger.primaryOptionText}\"",
-                        style = MaterialTheme.typography.bodySmall,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant
-                    )
-                    Text(
-                        text = "选项2: \"${trigger.secondaryOptionText}\"",
-                        style = MaterialTheme.typography.bodySmall,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant
-                    )
+                    trigger.options.forEachIndexed { index, option ->
+                        Text(
+                            text = "选项${index + 1}: \"${option.label}\" | BGM: ${option.bgmAsset} | Δ好感: ${option.affectionDelta}",
+                            style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                        )
+                    }
                 }
             }
             Row {
@@ -164,16 +164,28 @@ private fun TriggerItem(
 private fun AddOrEditTriggerDialog(
     trigger: KeywordTrigger?,
     isEditing: Boolean,
-    onConfirm: (keyword: String, dialogType: DialogType, primaryOptionText: String, secondaryOptionText: String) -> Unit,
+    onConfirm: (keyword: String, dialogType: DialogType, options: List<TriggerOption>) -> Unit,
     onDismiss: () -> Unit
 ) {
-    var keyword by remember { mutableStateOf(trigger?.keyword ?: "") }
-    var dialogType by remember { mutableStateOf(trigger?.dialogType ?: DialogType.CHOICE_DIALOG) }
-    var primaryOption by remember { mutableStateOf(trigger?.primaryOptionText ?: "好啊好啊") }
-    var secondaryOption by remember { mutableStateOf(trigger?.secondaryOptionText ?: "不了") }
-    var keywordError by remember { mutableStateOf(false) }
-    var primaryOptionError by remember { mutableStateOf(false) }
-    var secondaryOptionError by remember { mutableStateOf(false) }
+    var keyword by remember(trigger?.id) { mutableStateOf(trigger?.keyword ?: "") }
+    var dialogType by remember(trigger?.id) { mutableStateOf(trigger?.dialogType ?: DialogType.CHOICE_DIALOG) }
+    val optionStates = remember(trigger?.id) {
+        mutableStateListOf<OptionFormState>().apply {
+            val seed = trigger?.options ?: TriggerDefaults.defaultOptions(DialogType.CHOICE_DIALOG)
+            seed.forEach { option ->
+                add(
+                    OptionFormState(
+                        id = option.id,
+                        label = option.label,
+                        bgmAsset = option.bgmAsset,
+                        affectionDelta = option.affectionDelta.toString()
+                    )
+                )
+            }
+        }
+    }
+    var keywordError by remember(trigger?.id) { mutableStateOf(false) }
+    var optionCountError by remember(trigger?.id) { mutableStateOf(false) }
     val scrollState = rememberScrollState()
 
     AlertDialog(
@@ -217,10 +229,7 @@ private fun AddOrEditTriggerDialog(
                         Button(
                             onClick = {
                                 dialogType = type
-                                if (type != DialogType.CHOICE_DIALOG) {
-                                    primaryOptionError = false
-                                    secondaryOptionError = false
-                                }
+                                optionCountError = false
                             },
                             colors = ButtonDefaults.buttonColors(
                                 containerColor = if (isSelected) MaterialTheme.colorScheme.primary else Color.Gray
@@ -235,48 +244,44 @@ private fun AddOrEditTriggerDialog(
                     Spacer(Modifier.height(16.dp))
                     Text("自定义选项内容:", modifier = Modifier.padding(bottom = 8.dp))
 
-                    OutlinedTextField(
-                        value = primaryOption,
-                        onValueChange = {
-                            primaryOption = it
-                            if (primaryOptionError) {
-                                primaryOptionError = it.isBlank()
+                    optionStates.forEachIndexed { index, option ->
+                        OptionEditor(
+                            index = index,
+                            totalCount = optionStates.size,
+                            state = option,
+                            onStateChange = { updated -> optionStates[index] = updated },
+                            onRemove = {
+                                if (optionStates.size > 2) {
+                                    optionStates.removeAt(index)
+                                    optionCountError = optionStates.size < 2
+                                }
                             }
-                        },
-                        label = { Text("选项1 文本") },
-                        isError = primaryOptionError,
-                        singleLine = true,
-                        modifier = Modifier.fillMaxWidth()
-                    )
-                    if (primaryOptionError) {
+                        )
+                        Spacer(Modifier.height(12.dp))
+                    }
+
+                    if (optionCountError) {
                         Text(
-                            "选项内容不能为空",
+                            "至少需要两个选项",
                             color = MaterialTheme.colorScheme.error,
                             style = MaterialTheme.typography.bodySmall
                         )
                     }
 
-                    Spacer(Modifier.height(12.dp))
-
-                    OutlinedTextField(
-                        value = secondaryOption,
-                        onValueChange = {
-                            secondaryOption = it
-                            if (secondaryOptionError) {
-                                secondaryOptionError = it.isBlank()
-                            }
-                        },
-                        label = { Text("选项2 文本") },
-                        isError = secondaryOptionError,
-                        singleLine = true,
-                        modifier = Modifier.fillMaxWidth()
-                    )
-                    if (secondaryOptionError) {
-                        Text(
-                            "选项内容不能为空",
-                            color = MaterialTheme.colorScheme.error,
-                            style = MaterialTheme.typography.bodySmall
-                        )
+                    OutlinedButton(
+                        onClick = {
+                            optionStates.add(
+                                OptionFormState(
+                                    label = "选项${optionStates.size + 1}",
+                                    bgmAsset = "",
+                                    affectionDelta = "0.0"
+                                )
+                            )
+                            optionCountError = false
+                        }
+                    ) {
+                        Icon(Icons.Default.Add, contentDescription = "添加选项")
+                        Text("添加选项", modifier = Modifier.padding(start = 4.dp))
                     }
                 }
             }
@@ -285,27 +290,57 @@ private fun AddOrEditTriggerDialog(
             Button(
                 onClick = {
                     val sanitizedKeyword = keyword.trim()
-                    val sanitizedPrimary = primaryOption.trim()
-                    val sanitizedSecondary = secondaryOption.trim()
-
                     keywordError = sanitizedKeyword.isEmpty()
                     val requiresOptions = dialogType == DialogType.CHOICE_DIALOG
-                    if (requiresOptions) {
-                        primaryOptionError = sanitizedPrimary.isEmpty()
-                        secondaryOptionError = sanitizedSecondary.isEmpty()
+                    var hasOptionError = false
+                    val resolvedOptions = if (requiresOptions) {
+                        if (optionStates.size < 2) {
+                            optionCountError = true
+                            hasOptionError = true
+                        }
+                        optionStates.mapIndexed { index, option ->
+                            val trimmedLabel = option.label.trim()
+                            val trimmedBgm = option.bgmAsset.trim()
+                            val deltaText = option.affectionDelta.trim()
+                            val deltaValue = deltaText.toFloatOrNull()
+
+                            var updated = option
+                            if (trimmedLabel.isEmpty()) {
+                                updated = updated.copy(labelError = true)
+                                hasOptionError = true
+                            } else if (option.labelError) {
+                                updated = updated.copy(labelError = false)
+                            }
+                            if (trimmedBgm.isEmpty()) {
+                                updated = updated.copy(bgmError = true)
+                                hasOptionError = true
+                            } else if (option.bgmError) {
+                                updated = updated.copy(bgmError = false)
+                            }
+                            if (deltaValue == null) {
+                                updated = updated.copy(affectionError = true)
+                                hasOptionError = true
+                            } else if (option.affectionError) {
+                                updated = updated.copy(affectionError = false)
+                            }
+                            if (updated != option) {
+                                optionStates[index] = updated
+                            }
+
+                            TriggerOption(
+                                id = option.id,
+                                label = trimmedLabel.ifEmpty { option.label },
+                                bgmAsset = trimmedBgm.ifEmpty { option.bgmAsset },
+                                affectionDelta = deltaValue ?: 0f
+                            )
+                        }
                     } else {
-                        primaryOptionError = false
-                        secondaryOptionError = false
+                        emptyList()
                     }
 
-                    val optionsValid = !requiresOptions || (!primaryOptionError && !secondaryOptionError)
-                    if (!keywordError && optionsValid) {
-                        onConfirm(
-                            sanitizedKeyword,
-                            dialogType,
-                            sanitizedPrimary.ifEmpty { primaryOption },
-                            sanitizedSecondary.ifEmpty { secondaryOption }
-                        )
+                    if (!keywordError && !hasOptionError) {
+                        optionCountError = false
+                        onConfirm(sanitizedKeyword, dialogType, resolvedOptions)
                     }
                 }
             ) {
@@ -318,6 +353,104 @@ private fun AddOrEditTriggerDialog(
             }
         }
     )
+}
+
+private data class OptionFormState(
+    val id: String = java.util.UUID.randomUUID().toString(),
+    val label: String,
+    val bgmAsset: String,
+    val affectionDelta: String,
+    val labelError: Boolean = false,
+    val bgmError: Boolean = false,
+    val affectionError: Boolean = false
+)
+
+@Composable
+private fun OptionEditor(
+    index: Int,
+    totalCount: Int,
+    state: OptionFormState,
+    onStateChange: (OptionFormState) -> Unit,
+    onRemove: () -> Unit
+) {
+    Card(
+        shape = RoundedCornerShape(12.dp),
+        border = BorderStroke(1.dp, MaterialTheme.colorScheme.outline.copy(alpha = 0.4f)),
+        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface)
+    ) {
+        Column(modifier = Modifier.padding(12.dp)) {
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Text("选项 ${index + 1}", style = MaterialTheme.typography.titleSmall)
+                IconButton(
+                    onClick = onRemove,
+                    enabled = totalCount > 2,
+                    colors = IconButtonDefaults.iconButtonColors(
+                        contentColor = MaterialTheme.colorScheme.error,
+                        disabledContentColor = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                ) {
+                    Icon(Icons.Default.Delete, contentDescription = "删除选项")
+                }
+            }
+
+            OutlinedTextField(
+                value = state.label,
+                onValueChange = { onStateChange(state.copy(label = it, labelError = false)) },
+                label = { Text("选项文本") },
+                isError = state.labelError,
+                singleLine = true,
+                modifier = Modifier.fillMaxWidth()
+            )
+            if (state.labelError) {
+                Text(
+                    "选项文本不能为空",
+                    color = MaterialTheme.colorScheme.error,
+                    style = MaterialTheme.typography.bodySmall
+                )
+            }
+
+            Spacer(Modifier.height(8.dp))
+
+            OutlinedTextField(
+                value = state.bgmAsset,
+                onValueChange = { onStateChange(state.copy(bgmAsset = it, bgmError = false)) },
+                label = { Text("BGM 文件名") },
+                isError = state.bgmError,
+                singleLine = true,
+                modifier = Modifier.fillMaxWidth()
+            )
+            if (state.bgmError) {
+                Text(
+                    "BGM 文件名不能为空",
+                    color = MaterialTheme.colorScheme.error,
+                    style = MaterialTheme.typography.bodySmall
+                )
+            }
+
+            Spacer(Modifier.height(8.dp))
+
+            OutlinedTextField(
+                value = state.affectionDelta,
+                onValueChange = { onStateChange(state.copy(affectionDelta = it, affectionError = false)) },
+                label = { Text("好感度变动 (可为负数)") },
+                isError = state.affectionError,
+                singleLine = true,
+                keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal),
+                modifier = Modifier.fillMaxWidth()
+            )
+            if (state.affectionError) {
+                Text(
+                    "请输入有效的数字",
+                    color = MaterialTheme.colorScheme.error,
+                    style = MaterialTheme.typography.bodySmall
+                )
+            }
+        }
+    }
 }
 
 @Composable
