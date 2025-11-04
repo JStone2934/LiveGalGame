@@ -30,6 +30,8 @@ import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.TextButton
 import androidx.compose.material3.LinearProgressIndicator
 import androidx.compose.material3.Text
+import androidx.compose.material3.AlertDialog
+import androidx.compose.material3.Slider
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
@@ -100,6 +102,7 @@ import android.os.Build
 import android.provider.MediaStore
 import android.view.View
 import com.example.livegg1.R
+import kotlin.math.roundToInt
 import kotlin.random.Random
 import kotlin.math.min
 import kotlin.math.max
@@ -134,9 +137,22 @@ fun CameraScreen(
     var isInForeground by remember { mutableStateOf(true) }
 
     // 进度条相关：显示距离下一次更新的剩余时间
-    val updateIntervalMs = 3500L // 每次更新间隔（毫秒），可根据需要调整为 6000L
+    var updateIntervalMs by remember { mutableStateOf(3500L) } // 每次更新间隔（毫秒）
     var progress by remember { mutableStateOf(0f) } // 0f 开始，逐渐增长到 1f
     var timeRemainingSec by remember { mutableStateOf(updateIntervalMs / 1000f) }
+    var isIntervalDialogVisible by remember { mutableStateOf(false) }
+    var pendingIntervalSec by remember { mutableStateOf(updateIntervalMs / 1000f) }
+    var isRealtimePreview by remember { mutableStateOf(false) }
+    val minIntervalSec = 1f
+    val maxIntervalSec = 10f
+
+    LaunchedEffect(updateIntervalMs) {
+        val clamped = (updateIntervalMs / 1000f).coerceIn(minIntervalSec, maxIntervalSec)
+        pendingIntervalSec = clamped
+        if (!isRealtimePreview) {
+            timeRemainingSec = clamped
+        }
+    }
 
     var affectionLevel by remember {
         val min = 1f / 3f
@@ -201,6 +217,28 @@ fun CameraScreen(
             } finally {
                 bitmap.recycle()
             }
+        }
+    }
+
+    fun togglePreviewMode() {
+        if (isRealtimePreview) {
+            Log.d("CameraScreen", "Switching to timed preview")
+            isRealtimePreview = false
+            progress = 0f
+            timeRemainingSec = updateIntervalMs / 1000f
+        } else {
+            Log.d("CameraScreen", "Switching to realtime preview")
+            isRealtimePreview = true
+            progress = 1f
+            timeRemainingSec = 0f
+            val bitmapToRecycle = lastBitmap ?: imageToShow
+            bitmapToRecycle?.let { candidate ->
+                if (!candidate.isRecycled) {
+                    candidate.recycle()
+                }
+            }
+            lastBitmap = null
+            imageToShow = null
         }
     }
 
@@ -404,17 +442,38 @@ fun CameraScreen(
     }
 
     // --- 核心逻辑：定时拍照更新背景 ---
-    LaunchedEffect(imageCapture, isInForeground) {
+    LaunchedEffect(imageCapture, isInForeground, isRealtimePreview, updateIntervalMs) {
         if (!isInForeground) {
             progress = 0f
             timeRemainingSec = updateIntervalMs / 1000f
             return@LaunchedEffect
         }
-        // 首次启动时，先拍一张照片作为背景
-        takePhoto(imageCapture, cameraExecutor, { imageToShow = cropBitmapToAspectRatio(it, screenAspectRatio) }, {})
-        delay(1000)
 
-        // 主循环：每 updateIntervalMs 拍照一次。内部按 100ms 步进更新进度和剩余时间。
+        val shouldCaptureStills = !isRealtimePreview
+
+        if (shouldCaptureStills) {
+            // 首次启动时，先拍一张照片作为背景
+            takePhoto(
+                imageCapture,
+                cameraExecutor,
+                { bitmap ->
+                    if (isRealtimePreview) {
+                        if (!bitmap.isRecycled) {
+                            bitmap.recycle()
+                        }
+                    } else {
+                        imageToShow = cropBitmapToAspectRatio(bitmap, screenAspectRatio)
+                    }
+                },
+                {}
+            )
+            delay(1000)
+        } else {
+            progress = 0f
+            timeRemainingSec = updateIntervalMs / 1000f
+        }
+
+        // 主循环：每 updateIntervalMs 更新一次。内部按 100ms 步进更新进度和剩余时间。
         val stepMs = 100L
         while (isActive) {
             var elapsed = 0L
@@ -426,42 +485,95 @@ fun CameraScreen(
                 timeRemainingSec = remaining / 1000f
             }
 
-            // 时间到，拍照并重置状态
-            takePhoto(
-                imageCapture = imageCapture,
-                executor = cameraExecutor,
-                onImageCaptured = { newBitmap ->
-                    val croppedBitmap = cropBitmapToAspectRatio(newBitmap, screenAspectRatio)
-                    lastBitmap?.let { oldBitmap ->
-                        if (oldBitmap != croppedBitmap && !oldBitmap.isRecycled) {
-                            oldBitmap.recycle()
-                        }
-                    }
-                    lastBitmap = croppedBitmap
-                    imageToShow = croppedBitmap
-                    Log.d("MainLoop", "Background photo updated.")
-                },
-                onError = { Log.e("MainLoop", "Photo capture failed", it) }
-            )
+            if (!isActive) break
 
-            // 拍照后马上重置进度（下一刻开始倒计时）
+            if (shouldCaptureStills) {
+                takePhoto(
+                    imageCapture = imageCapture,
+                    executor = cameraExecutor,
+                    onImageCaptured = { newBitmap ->
+                        if (isRealtimePreview) {
+                            if (!newBitmap.isRecycled) {
+                                newBitmap.recycle()
+                            }
+                        } else {
+                            val croppedBitmap = cropBitmapToAspectRatio(newBitmap, screenAspectRatio)
+                            lastBitmap?.let { oldBitmap ->
+                                if (oldBitmap != croppedBitmap && !oldBitmap.isRecycled) {
+                                    oldBitmap.recycle()
+                                }
+                            }
+                            lastBitmap = croppedBitmap
+                            imageToShow = croppedBitmap
+                            Log.d("MainLoop", "Background photo updated.")
+                        }
+                    },
+                    onError = { Log.e("MainLoop", "Photo capture failed", it) }
+                )
+            }
+
+            // 重置进度（下一刻开始倒计时）
             progress = 0f
             timeRemainingSec = updateIntervalMs / 1000f
         }
     }
 
     // --- UI 界面 ---
+
+    if (isIntervalDialogVisible) {
+        AlertDialog(
+            onDismissRequest = { isIntervalDialogVisible = false },
+            title = { Text("调整CG更新间隔") },
+            text = {
+                Column {
+                    Text("拖动滑块来设定画面更新的间隔时间")
+                    Spacer(modifier = Modifier.height(16.dp))
+                    Slider(
+                        value = pendingIntervalSec,
+                        onValueChange = { pendingIntervalSec = it.coerceIn(minIntervalSec, maxIntervalSec) },
+                        valueRange = minIntervalSec..maxIntervalSec
+                    )
+                    Spacer(modifier = Modifier.height(8.dp))
+                    Text(String.format("%.1f 秒", pendingIntervalSec))
+                }
+            },
+            confirmButton = {
+                TextButton(onClick = {
+                    val clamped = pendingIntervalSec.coerceIn(minIntervalSec, maxIntervalSec)
+                    val newIntervalMs = (clamped * 1000f).roundToInt().toLong()
+                    updateIntervalMs = newIntervalMs
+                    progress = 0f
+                    timeRemainingSec = newIntervalMs / 1000f
+                    isIntervalDialogVisible = false
+                }) {
+                    Text("确定")
+                }
+            },
+            dismissButton = {
+                TextButton(onClick = { isIntervalDialogVisible = false }) {
+                    Text("取消")
+                }
+            }
+        )
+    }
+
     CameraScreenContent(
         isLoading = isLoading,
         imageToShow = imageToShow,
         captionToShow = captionToShow,
         progress = progress,
         timeRemainingSec = timeRemainingSec,
+        isRealtimePreview = isRealtimePreview,
         chapterTitle = chapterTitle,
         previewView = { AndroidView({ previewView }, modifier = Modifier.fillMaxSize()) },
         affectionLevel = affectionLevel,
         onSaveSnapshot = ::saveCurrentScreen,
         onManageTriggers = onManageTriggers,
+        onAdjustInterval = {
+            pendingIntervalSec = (updateIntervalMs / 1000f).coerceIn(minIntervalSec, maxIntervalSec)
+            isIntervalDialogVisible = true
+        },
+        onTogglePreviewMode = ::togglePreviewMode,
         flashAlpha = flashAlpha
     )
 }
@@ -473,6 +585,7 @@ private fun CameraScreenContent(
     captionToShow: String,
     progress: Float,
     timeRemainingSec: Float,
+    isRealtimePreview: Boolean = false,
     rectOffsetX: Dp = 4.dp,
     rectOffsetY: Dp = 10.dp,
     chapterTitle: String,
@@ -480,6 +593,8 @@ private fun CameraScreenContent(
     affectionLevel: Float,
     onSaveSnapshot: (String) -> Unit = {},
     onManageTriggers: () -> Unit = {},
+    onAdjustInterval: () -> Unit = {},
+    onTogglePreviewMode: () -> Unit = {},
     flashAlpha: Float = 0f
 ) {
     val context = LocalContext.current
@@ -602,7 +717,7 @@ private fun CameraScreenContent(
                     contentScale = ContentScale.Crop
                 )
             }
-            else -> {
+            else -> if (!isRealtimePreview) {
                 Box(modifier = Modifier.fillMaxSize().background(Color.Black))
             }
         }
@@ -767,11 +882,23 @@ private fun CameraScreenContent(
                     }
 
                     // 新增的图像按钮集合：image4, image5, image7, image8
-                    TextButton(onClick = { Log.d("CameraScreen", "image4 clicked") }, contentPadding = PaddingValues(horizontal = 4.dp, vertical = 0.dp), modifier = Modifier.height(btnHeight)) {
+                    TextButton(onClick = {
+                        Log.d("CameraScreen", "image4 clicked")
+                        onAdjustInterval()
+                    }, contentPadding = PaddingValues(horizontal = 4.dp, vertical = 0.dp), modifier = Modifier.height(btnHeight)) {
                         Image(painter = painterResource(id = R.drawable.image4), contentDescription = "image4", modifier = Modifier.width(18.dp).height(18.dp), colorFilter = ColorFilter.tint(Color.White))
                     }
-                    TextButton(onClick = { Log.d("CameraScreen", "image5 clicked") }, contentPadding = PaddingValues(horizontal = 4.dp, vertical = 0.dp), modifier = Modifier.height(btnHeight)) {
-                        Image(painter = painterResource(id = R.drawable.image5), contentDescription = "image5", modifier = Modifier.width(18.dp).height(18.dp), colorFilter = ColorFilter.tint(Color.White))
+                    TextButton(onClick = {
+                        Log.d("CameraScreen", "image5 clicked")
+                        onTogglePreviewMode()
+                    }, contentPadding = PaddingValues(horizontal = 4.dp, vertical = 0.dp), modifier = Modifier.height(btnHeight)) {
+                        val realtimeTint = if (isRealtimePreview) Color(0xFFFFC857) else Color.White
+                        Image(
+                            painter = painterResource(id = R.drawable.image5),
+                            contentDescription = "image5",
+                            modifier = Modifier.width(18.dp).height(18.dp),
+                            colorFilter = ColorFilter.tint(realtimeTint)
+                        )
                     }
                     TextButton(onClick = { Log.d("CameraScreen", "image7 clicked") }, contentPadding = PaddingValues(horizontal = 4.dp, vertical = 0.dp), modifier = Modifier.height(btnHeight)) {
                         Image(painter = painterResource(id = R.drawable.image7), contentDescription = "image7", modifier = Modifier.width(18.dp).height(18.dp), colorFilter = ColorFilter.tint(Color.White))
