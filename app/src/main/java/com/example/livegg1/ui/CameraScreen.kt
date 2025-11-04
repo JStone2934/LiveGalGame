@@ -205,20 +205,26 @@ fun CameraScreen(
         }
     }
 
-    fun enableRealtimePreview() {
-        if (isRealtimePreview) return
-        Log.d("CameraScreen", "Switching to realtime preview")
-        isRealtimePreview = true
-        progress = 1f
-        timeRemainingSec = 0f
-        val bitmapToRecycle = lastBitmap ?: imageToShow
-        bitmapToRecycle?.let { candidate ->
-            if (!candidate.isRecycled) {
-                candidate.recycle()
+    fun togglePreviewMode() {
+        if (isRealtimePreview) {
+            Log.d("CameraScreen", "Switching to timed preview")
+            isRealtimePreview = false
+            progress = 0f
+            timeRemainingSec = updateIntervalMs / 1000f
+        } else {
+            Log.d("CameraScreen", "Switching to realtime preview")
+            isRealtimePreview = true
+            progress = 1f
+            timeRemainingSec = 0f
+            val bitmapToRecycle = lastBitmap ?: imageToShow
+            bitmapToRecycle?.let { candidate ->
+                if (!candidate.isRecycled) {
+                    candidate.recycle()
+                }
             }
+            lastBitmap = null
+            imageToShow = null
         }
-        lastBitmap = null
-        imageToShow = null
     }
 
     // 新的状态管理：用于连续识别
@@ -510,7 +516,7 @@ fun CameraScreen(
         affectionLevel = affectionLevel,
         onSaveSnapshot = ::saveCurrentScreen,
         onManageTriggers = onManageTriggers,
-        onEnableRealtimePreview = ::enableRealtimePreview,
+        onTogglePreviewMode = ::togglePreviewMode,
         flashAlpha = flashAlpha
     )
 }
@@ -530,7 +536,7 @@ private fun CameraScreenContent(
     affectionLevel: Float,
     onSaveSnapshot: (String) -> Unit = {},
     onManageTriggers: () -> Unit = {},
-    onEnableRealtimePreview: () -> Unit = {},
+    onTogglePreviewMode: () -> Unit = {},
     flashAlpha: Float = 0f
 ) {
     val context = LocalContext.current
@@ -823,9 +829,15 @@ private fun CameraScreenContent(
                     }
                     TextButton(onClick = {
                         Log.d("CameraScreen", "image5 clicked")
-                        onEnableRealtimePreview()
+                        onTogglePreviewMode()
                     }, contentPadding = PaddingValues(horizontal = 4.dp, vertical = 0.dp), modifier = Modifier.height(btnHeight)) {
-                        Image(painter = painterResource(id = R.drawable.image5), contentDescription = "image5", modifier = Modifier.width(18.dp).height(18.dp), colorFilter = ColorFilter.tint(Color.White))
+                        val realtimeTint = if (isRealtimePreview) Color(0xFFFFC857) else Color.White
+                        Image(
+                            painter = painterResource(id = R.drawable.image5),
+                            contentDescription = "image5",
+                            modifier = Modifier.width(18.dp).height(18.dp),
+                            colorFilter = ColorFilter.tint(realtimeTint)
+                        )
                     }
                     TextButton(onClick = { Log.d("CameraScreen", "image7 clicked") }, contentPadding = PaddingValues(horizontal = 4.dp, vertical = 0.dp), modifier = Modifier.height(btnHeight)) {
                         Image(painter = painterResource(id = R.drawable.image7), contentDescription = "image7", modifier = Modifier.width(18.dp).height(18.dp), colorFilter = ColorFilter.tint(Color.White))
