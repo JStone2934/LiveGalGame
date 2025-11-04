@@ -30,6 +30,8 @@ import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.TextButton
 import androidx.compose.material3.LinearProgressIndicator
 import androidx.compose.material3.Text
+import androidx.compose.material3.AlertDialog
+import androidx.compose.material3.Slider
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
@@ -100,6 +102,7 @@ import android.os.Build
 import android.provider.MediaStore
 import android.view.View
 import com.example.livegg1.R
+import kotlin.math.roundToInt
 import kotlin.random.Random
 import kotlin.math.min
 import kotlin.math.max
@@ -134,10 +137,22 @@ fun CameraScreen(
     var isInForeground by remember { mutableStateOf(true) }
 
     // 进度条相关：显示距离下一次更新的剩余时间
-    val updateIntervalMs = 3500L // 每次更新间隔（毫秒），可根据需要调整为 6000L
+    var updateIntervalMs by remember { mutableStateOf(3500L) } // 每次更新间隔（毫秒）
     var progress by remember { mutableStateOf(0f) } // 0f 开始，逐渐增长到 1f
     var timeRemainingSec by remember { mutableStateOf(updateIntervalMs / 1000f) }
+    var isIntervalDialogVisible by remember { mutableStateOf(false) }
+    var pendingIntervalSec by remember { mutableStateOf(updateIntervalMs / 1000f) }
     var isRealtimePreview by remember { mutableStateOf(false) }
+    val minIntervalSec = 1f
+    val maxIntervalSec = 10f
+
+    LaunchedEffect(updateIntervalMs) {
+        val clamped = (updateIntervalMs / 1000f).coerceIn(minIntervalSec, maxIntervalSec)
+        pendingIntervalSec = clamped
+        if (!isRealtimePreview) {
+            timeRemainingSec = clamped
+        }
+    }
 
     var affectionLevel by remember {
         val min = 1f / 3f
@@ -427,7 +442,7 @@ fun CameraScreen(
     }
 
     // --- 核心逻辑：定时拍照更新背景 ---
-    LaunchedEffect(imageCapture, isInForeground, isRealtimePreview) {
+    LaunchedEffect(imageCapture, isInForeground, isRealtimePreview, updateIntervalMs) {
         if (!isInForeground) {
             progress = 0f
             timeRemainingSec = updateIntervalMs / 1000f
@@ -504,6 +519,44 @@ fun CameraScreen(
     }
 
     // --- UI 界面 ---
+
+    if (isIntervalDialogVisible) {
+        AlertDialog(
+            onDismissRequest = { isIntervalDialogVisible = false },
+            title = { Text("调整更新间隔") },
+            text = {
+                Column {
+                    Text("拖动滑块来设定画面更新的间隔时间")
+                    Spacer(modifier = Modifier.height(16.dp))
+                    Slider(
+                        value = pendingIntervalSec,
+                        onValueChange = { pendingIntervalSec = it.coerceIn(minIntervalSec, maxIntervalSec) },
+                        valueRange = minIntervalSec..maxIntervalSec
+                    )
+                    Spacer(modifier = Modifier.height(8.dp))
+                    Text(String.format("%.1f 秒", pendingIntervalSec))
+                }
+            },
+            confirmButton = {
+                TextButton(onClick = {
+                    val clamped = pendingIntervalSec.coerceIn(minIntervalSec, maxIntervalSec)
+                    val newIntervalMs = (clamped * 1000f).roundToInt().toLong()
+                    updateIntervalMs = newIntervalMs
+                    progress = 0f
+                    timeRemainingSec = newIntervalMs / 1000f
+                    isIntervalDialogVisible = false
+                }) {
+                    Text("确定")
+                }
+            },
+            dismissButton = {
+                TextButton(onClick = { isIntervalDialogVisible = false }) {
+                    Text("取消")
+                }
+            }
+        )
+    }
+
     CameraScreenContent(
         isLoading = isLoading,
         imageToShow = imageToShow,
@@ -516,6 +569,10 @@ fun CameraScreen(
         affectionLevel = affectionLevel,
         onSaveSnapshot = ::saveCurrentScreen,
         onManageTriggers = onManageTriggers,
+        onAdjustInterval = {
+            pendingIntervalSec = (updateIntervalMs / 1000f).coerceIn(minIntervalSec, maxIntervalSec)
+            isIntervalDialogVisible = true
+        },
         onTogglePreviewMode = ::togglePreviewMode,
         flashAlpha = flashAlpha
     )
@@ -536,6 +593,7 @@ private fun CameraScreenContent(
     affectionLevel: Float,
     onSaveSnapshot: (String) -> Unit = {},
     onManageTriggers: () -> Unit = {},
+    onAdjustInterval: () -> Unit = {},
     onTogglePreviewMode: () -> Unit = {},
     flashAlpha: Float = 0f
 ) {
@@ -824,7 +882,10 @@ private fun CameraScreenContent(
                     }
 
                     // 新增的图像按钮集合：image4, image5, image7, image8
-                    TextButton(onClick = { Log.d("CameraScreen", "image4 clicked") }, contentPadding = PaddingValues(horizontal = 4.dp, vertical = 0.dp), modifier = Modifier.height(btnHeight)) {
+                    TextButton(onClick = {
+                        Log.d("CameraScreen", "image4 clicked")
+                        onAdjustInterval()
+                    }, contentPadding = PaddingValues(horizontal = 4.dp, vertical = 0.dp), modifier = Modifier.height(btnHeight)) {
                         Image(painter = painterResource(id = R.drawable.image4), contentDescription = "image4", modifier = Modifier.width(18.dp).height(18.dp), colorFilter = ColorFilter.tint(Color.White))
                     }
                     TextButton(onClick = {
