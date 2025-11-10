@@ -18,7 +18,6 @@ APP在[tag](https://github.com/JStone2934/LiveGalGame/tags)中可以直接下载
 - 好感度条会随着时间慢慢减少，有语音的时候会不断提高，选择不同的弹窗选项也会影响好感度
 - 点击快进可以调整CG效果画面的更新速度
 - 点击跳过可以把画面更新切换成实时的
-- 如遇初始化失败，可以试试重启APP，或者在手机设置里面把软件的语音权限打开再关闭
 
 ### B站视频:[【-修复了GalGame玩家和女生聊天没有字幕的Bug-】](https://www.bilibili.com/video/BV15Q1jBQEzq/?share_source=copy_web&vd_source=181e7acfd50ad37dbfacd601ca302c13)
 <img width="2533" height="1427" alt="image" src="https://github.com/user-attachments/assets/65dd6c6f-bf47-4bc0-9695-034c7faa290d" />
