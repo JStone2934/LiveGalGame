@@ -351,21 +351,48 @@ fun CameraScreen(
 
     // --- 核心逻辑：初始化 ---
     LaunchedEffect(Unit) {
-        withContext(Dispatchers.IO) {
-            try {
+        val r =  runCatching {
+            withContext(Dispatchers.IO) {
                 val sourcePath = "model"
                 val targetPath = StorageService.sync(context, sourcePath, "model")
                 Log.d("Vosk", "Model sync completed. Target path: $targetPath")
-                model = Model(targetPath)
-                speechService = SpeechService(Recognizer(model, 16000.0f), 16000.0f)
-                Log.d("Vosk", "Model and SpeechService loaded successfully.")
-            } catch (e: IOException) {
-                Log.e("Vosk", "Failed to initialize Vosk.", e)
-                errorText = "错误: 初始化语音模型失败。"
-            } finally {
+                Model(targetPath)
+            }
+        }.onFailure { e ->
+            Log.e("Vosk", "Failed to initialize Vosk model.", e)
+            errorText = "错误: 初始化语音模型失败。"
+        }
+
+        if (r.isFailure) {
+            isLoading = false
+            return@LaunchedEffect
+        } else {
+            model = r.getOrThrow()
+        }
+
+        Log.d("Vosk", "Model loaded successfully.")
+
+        // 系统拉起麦克风服务时会暂时占用设备，我们多重试几次
+        val attempts = (1000 / 250) * 3
+        repeat(attempts) { attempt ->
+            val r = runCatching {
+                withContext(Dispatchers.IO)  { SpeechService(Recognizer(model, 16000.0f), 16000.0f) }
+            }
+
+            if (r.isSuccess) {
+                speechService = r.getOrThrow()
+                Log.d("Vosk", "Speech service initialized.")
                 isLoading = false
+                return@LaunchedEffect
+            } else {
+                Log.e("Vosk", "Speech service init attempt ${attempt + 1}/$attempts failed.", r.exceptionOrNull())
+                delay(250)
             }
         }
+
+        Log.e("Vosk", "Failed to initialize speech service after $attempts attempts.")
+        errorText = "错误: 初始化麦克风失败。"
+        isLoading = false
     }
 
     // --- 核心逻辑：绑定相机和资源管理 ---
