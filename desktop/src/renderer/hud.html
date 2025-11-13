@@ -1,0 +1,253 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>LiveGalGame HUD</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <style>
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Inter', 'Noto Sans SC', sans-serif;
+      overflow: hidden;
+      background: transparent;
+    }
+
+    .hud-container {
+      background: rgba(255, 255, 255, 0.85);
+      backdrop-filter: blur(10px);
+      border-radius: 16px;
+      border: 1px solid rgba(197, 22, 98, 0.2);
+      box-shadow: 0 8px 32px rgba(0, 0, 0, 0.1);
+      padding: 16px;
+      margin: 10px;
+      transition: all 0.3s ease;
+    }
+
+    .hud-container:hover {
+      box-shadow: 0 12px 40px rgba(0, 0, 0, 0.15);
+    }
+
+    .dark .hud-container {
+      background: rgba(42, 22, 31, 0.85);
+      border-color: rgba(197, 22, 98, 0.3);
+    }
+
+    .transcript-area {
+      max-height: 120px;
+      overflow-y: auto;
+      font-size: 14px;
+      line-height: 1.4;
+    }
+
+    .transcript-item {
+      margin-bottom: 8px;
+      padding: 6px 8px;
+      border-radius: 8px;
+      background: rgba(243, 231, 236, 0.5);
+    }
+
+    .dark .transcript-item {
+      background: rgba(64, 38, 52, 0.5);
+    }
+
+    .transcript-user {
+      color: #c51662;
+      font-weight: 500;
+    }
+
+    .transcript-other {
+      color: #4a5568;
+    }
+
+    .dark .transcript-other {
+      color: #e2e8f0;
+    }
+
+    .suggestion-card {
+      background: linear-gradient(135deg, rgba(197, 22, 98, 0.1), rgba(142, 36, 170, 0.1));
+      border: 1px solid rgba(197, 22, 98, 0.3);
+      border-radius: 12px;
+      padding: 12px;
+      margin-top: 12px;
+      cursor: pointer;
+      transition: all 0.2s ease;
+    }
+
+    .suggestion-card:hover {
+      background: linear-gradient(135deg, rgba(197, 22, 98, 0.15), rgba(142, 36, 170, 0.15));
+      transform: translateY(-2px);
+    }
+
+    .header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 12px;
+      padding-bottom: 8px;
+      border-bottom: 1px solid rgba(0, 0, 0, 0.05);
+    }
+
+    .dark .header {
+      border-bottom-color: rgba(255, 255, 255, 0.05);
+    }
+
+    .title {
+      font-size: 16px;
+      font-weight: 600;
+      color: #c51662;
+    }
+
+    .controls {
+      display: flex;
+      gap: 8px;
+    }
+
+    .control-btn {
+      width: 28px;
+      height: 28px;
+      border-radius: 50%;
+      border: none;
+      background: rgba(197, 22, 98, 0.1);
+      color: #c51662;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 16px;
+      transition: all 0.2s ease;
+    }
+
+    .control-btn:hover {
+      background: rgba(197, 22, 98, 0.2);
+      transform: scale(1.1);
+    }
+
+    .status-indicator {
+      display: inline-block;
+      width: 8px;
+      height: 8px;
+      border-radius: 50%;
+      background: #22c55e;
+      margin-right: 6px;
+      animation: pulse 2s infinite;
+    }
+
+    @keyframes pulse {
+      0% { opacity: 1; }
+      50% { opacity: 0.5; }
+      100% { opacity: 1; }
+    }
+
+    .section-title {
+      font-size: 12px;
+      font-weight: 600;
+      color: #974e6e;
+      margin-bottom: 8px;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+    }
+
+    .dark .section-title {
+      color: #a88fa0;
+    }
+  </style>
+</head>
+<body>
+  <div class="hud-container">
+    <!-- 头部 -->
+    <div class="header">
+      <div style="display: flex; align-items: center;">
+        <span class="status-indicator"></span>
+        <span class="title">LiveGalGame 助手</span>
+      </div>
+      <div class="controls">
+        <button class="control-btn" id="minimize-btn" title="最小化">−</button>
+        <button class="control-btn" id="close-btn" title="关闭">×</button>
+      </div>
+    </div>
+
+    <!-- 转录区域 -->
+    <div class="section">
+      <div class="section-title">实时转录</div>
+
+      <div class="mb-3">
+        <div class="section-title" style="font-size: 11px; color: #c51662;">对方</div>
+        <div class="transcript-area" id="other-transcript">
+          <div class="transcript-item">
+            <span class="transcript-other">哦，真的吗？我刚才还在想，待会儿要不要去散散步。这个季节的樱花应该很美。</span>
+          </div>
+        </div>
+      </div>
+
+      <div>
+        <div class="section-title" style="font-size: 11px; color: #c51662;">我</div>
+        <div class="transcript-area" id="user-transcript">
+          <div class="transcript-item">
+            <span class="transcript-user">听起来真不错！也许我们可以一起去？</span>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- AI建议 -->
+    <div class="section" style="margin-top: 16px;">
+      <div class="section-title">AI 建议</div>
+      <div id="suggestions-area">
+        <div class="suggestion-card">
+          <div style="display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 6px;">
+            <strong style="font-size: 13px; color: #c51662;">提议具体地点</strong>
+            <span style="font-size: 11px; color: #22c55e; font-weight: 600;">❤️ +15</span>
+          </div>
+          <p style="font-size: 13px; margin: 0; line-height: 1.4;">"我知道附近有个很棒的公园，樱花特别美，要不要去那里？"</p>
+          <div style="display: flex; gap: 6px; margin-top: 8px;">
+            <span style="font-size: 10px; background: rgba(197, 22, 98, 0.1); color: #c51662; padding: 2px 6px; border-radius: 12px;">主动</span>
+            <span style="font-size: 10px; background: rgba(34, 197, 94, 0.1); color: #22c55e; padding: 2px 6px; border-radius: 12px;">体贴</span>
+          </div>
+        </div>
+
+        <div class="suggestion-card">
+          <div style="display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 6px;">
+            <strong style="font-size: 13px; color: #c51662;">表达期待</strong>
+            <span style="font-size: 11px; color: #22c55e; font-weight: 600;">❤️ +10</span>
+          </div>
+          <p style="font-size: 13px; margin: 0; line-height: 1.4;">"太好了！我一直想和你一起去散步呢。"</p>
+          <div style="display: flex; gap: 6px; margin-top: 8px;">
+            <span style="font-size: 10px; background: rgba(197, 22, 98, 0.1); color: #c51662; padding: 2px 6px; border-radius: 12px;">情感</span>
+            <span style="font-size: 10px; background: rgba(245, 158, 11, 0.1); color: #f59e0b; padding: 2px 6px; border-radius: 12px;">真诚</span>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    // 最小化HUD
+    document.getElementById('minimize-btn').addEventListener('click', () => {
+      console.log('Minimize HUD');
+      // 实际实现中，这里会最小化HUD或隐藏到托盘
+    });
+
+    // 关闭HUD
+    document.getElementById('close-btn').addEventListener('click', () => {
+      console.log('Close HUD');
+      window.close();
+    });
+
+    // 点击建议卡片
+    document.querySelectorAll('.suggestion-card').forEach(card => {
+      card.addEventListener('click', () => {
+        console.log('Suggestion clicked');
+        // 这里可以实现：复制建议文本、发送给主窗口等
+      });
+    });
+
+    console.log('HUD loaded');
+  </script>
+</body>
+</html>

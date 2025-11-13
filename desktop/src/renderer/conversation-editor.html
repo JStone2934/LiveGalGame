@@ -1,0 +1,283 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>LiveGalGame - 对话编辑器</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script>
+    tailwind.config = {
+      darkMode: "class",
+      theme: {
+        extend: {
+          colors: {
+            "primary": "#c51662",
+            "background-light": "#f8f6f7",
+            "background-dark": "#211118",
+            "text-light": "#1b0e14",
+            "text-dark": "#f8f6f7",
+            "text-muted-light": "#974e6e",
+            "text-muted-dark": "#a88e99",
+            "surface-light": "#f3e7ec",
+            "surface-dark": "#3a242d",
+            "ai-highlight": "rgba(255, 215, 0, 0.25)"
+          },
+          fontFamily: {
+            "display": ["Inter", "Noto Sans SC", "sans-serif"]
+          },
+          borderRadius: {
+            "DEFAULT": "1rem",
+            "lg": "2rem",
+            "xl": "3rem",
+            "full": "9999px"
+          }
+        }
+      }
+    }
+  </script>
+  <style>
+    body {
+      font-family: 'Inter', 'Noto Sans SC', sans-serif;
+    }
+  </style>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Noto+Sans+SC:wght@300;400;500;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@20..48,100..700,0..1,-50..200" />
+</head>
+<body class="bg-background-light dark:bg-background-dark text-text-light dark:text-text-dark min-h-screen">
+  <div class="flex h-screen">
+    <!-- 左侧导航栏 -->
+    <aside class="w-72 flex-shrink-0 border-r border-surface-light dark:border-surface-dark/40">
+      <div class="flex h-full flex-col justify-between p-4">
+        <!-- 顶部区域 -->
+        <div class="flex flex-col gap-4">
+          <!-- Logo和标题 -->
+          <div class="flex items-center gap-3 px-2">
+            <div class="bg-center bg-no-repeat aspect-square bg-cover rounded-full size-10"
+                 style="background-color: #c51662;">
+            </div>
+            <div class="flex flex-col">
+              <h1 class="text-text-light dark:text-text-dark text-base font-bold leading-normal">LiveGalGame</h1>
+              <p class="text-text-muted-light dark:text-text-muted-dark text-sm font-normal leading-normal">对话编辑器</p>
+            </div>
+          </div>
+
+          <!-- 搜索框 -->
+          <div class="relative px-2">
+            <input class="w-full h-9 px-4 pl-10 text-sm rounded-full border-none bg-surface-light dark:bg-surface-dark
+                   focus:ring-2 focus:ring-primary/50 text-text-light dark:text-text-dark
+                   placeholder:text-text-muted-light dark:placeholder:text-text-muted-dark"
+                   placeholder="搜索对话..." type="text"/>
+            <span class="material-symbols-outlined absolute left-5 top-1/2 -translate-y-1/2
+                         text-text-muted-light dark:text-text-muted-dark text-lg">search</span>
+          </div>
+
+          <!-- 对话列表 -->
+          <div class="flex flex-col gap-1 mt-2" id="conversation-list">
+            <div class="conversation-item flex items-center gap-3 px-3 py-2 rounded-full bg-surface-light dark:bg-surface-dark cursor-pointer"
+                 data-conversation-id="miyu">
+              <div class="bg-center bg-no-repeat aspect-square bg-cover rounded-full size-8 shrink-0"
+                   style="background-color: #ff6b6b;"></div>
+              <div class="flex-grow overflow-hidden">
+                <p class="text-text-light dark:text-text-dark text-sm font-medium leading-normal truncate">Miyu</p>
+                <p class="text-text-muted-light dark:text-text-muted-dark text-xs truncate">哦，真的吗？我刚才还在想...</p>
+              </div>
+            </div>
+            <div class="conversation-item flex items-center gap-3 px-3 py-2 rounded-full hover:bg-surface-light dark:hover:bg-surface-dark cursor-pointer"
+                 data-conversation-id="akira">
+              <div class="bg-center bg-no-repeat aspect-square bg-cover rounded-full size-8 shrink-0"
+                   style="background-color: #4ecdc4;"></div>
+              <div class="flex-grow overflow-hidden">
+                <p class="text-text-light dark:text-text-dark text-sm font-medium leading-normal truncate">Akira</p>
+                <p class="text-text-muted-light dark:text-text-muted-dark text-xs truncate">别忘了我们的约定！</p>
+              </div>
+            </div>
+            <div class="conversation-item flex items-center gap-3 px-3 py-2 rounded-full hover:bg-surface-light dark:hover:bg-surface-dark cursor-pointer"
+                 data-conversation-id="hana">
+              <div class="bg-center bg-no-repeat aspect-square bg-cover rounded-full size-8 shrink-0"
+                   style="background-color: #ffe66d;"></div>
+              <div class="flex-grow overflow-hidden">
+                <p class="text-text-light dark:text-text-dark text-sm font-medium leading-normal truncate">Hana</p>
+                <p class="text-text-muted-light dark:text-text-muted-dark text-xs truncate">我今天发现了一家超可爱的小咖啡馆。</p>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- 底部按钮 -->
+        <div class="flex flex-col gap-4">
+          <a href="./index.html" class="flex min-w-[84px] w-full cursor-pointer items-center justify-center overflow-hidden rounded-full
+                         h-10 px-4 bg-primary text-white text-sm font-bold leading-normal tracking-[0.015em]">
+            <span class="truncate">返回总览</span>
+          </a>
+          <div class="flex flex-col gap-1">
+            <div class="flex items-center gap-3 px-3 py-2 rounded-full hover:bg-surface-light dark:hover:bg-surface-dark cursor-pointer">
+              <span class="material-symbols-outlined text-text-light dark:text-text-dark text-2xl">settings</span>
+              <p class="text-text-light dark:text-text-dark text-sm font-medium leading-normal">设置</p>
+            </div>
+            <div class="flex items-center gap-3 px-3 py-2 rounded-full hover:bg-surface-light dark:hover:bg-surface-dark cursor-pointer">
+              <span class="material-symbols-outlined text-text-light dark:text-text-dark text-2xl">help_center</span>
+              <p class="text-text-light dark:text-text-dark text-sm font-medium leading-normal">帮助</p>
+            </div>
+          </div>
+        </div>
+      </div>
+    </aside>
+
+    <!-- 中间主内容区 -->
+    <main class="flex flex-1 flex-col" id="main-content">
+      <!-- 欢迎页（默认显示） -->
+      <div id="welcome-page" class="flex-1 overflow-y-auto p-4 md:p-6 space-y-6">
+        <div class="text-center py-12">
+          <h2 class="text-2xl font-bold text-text-light dark:text-text-dark mb-4">欢迎使用对话编辑器</h2>
+          <p class="text-text-muted-light dark:text-text-muted-dark mb-8">点击左侧对话列表开始编辑</p>
+        </div>
+      </div>
+
+      <!-- 对话详情页（隐藏，选中对话后显示） -->
+      <div id="conversation-page" class="hidden flex-1 flex-col">
+        <header class="flex h-16 flex-shrink-0 items-center justify-between gap-2 border-b border-surface-light dark:border-surface-dark/40 px-6 py-3">
+          <div class="flex items-center gap-3">
+            <div class="conversation-avatar bg-center bg-no-repeat aspect-square bg-cover rounded-full size-9"
+                 style="background-color: #ff6b6b;"></div>
+            <div class="flex flex-col">
+              <h1 class="conversation-title text-text-light dark:text-text-dark text-lg font-bold leading-tight tracking-[-0.015em]">
+                与 Miyu 的对话<span class="text-primary">*</span>
+              </h1>
+              <div class="conversation-tags flex items-center gap-2">
+                <span class="inline-flex items-center gap-1.5 bg-blue-100 dark:bg-blue-900/40
+                           text-blue-700 dark:text-blue-300 text-xs font-medium px-2 py-0.5 rounded-full">
+                  <span class="material-symbols-outlined text-sm">mood</span><span>愉快</span>
+                </span>
+                <span class="inline-flex items-center gap-1.5 bg-green-100 dark:bg-green-900/40
+                           text-green-700 dark:text-green-300 text-xs font-medium px-2 py-0.5 rounded-full">
+                  <span class="material-symbols-outlined text-sm">local_florist</span><span>日常</span>
+                </span>
+              </div>
+            </div>
+          </div>
+          <div class="flex items-center gap-2">
+            <button class="p-2 text-text-light dark:text-text-dark rounded-full hover:bg-surface-light dark:hover:bg-surface-dark">
+              <span class="material-symbols-outlined text-2xl">history</span>
+            </button>
+            <button class="p-2 text-text-light dark:text-text-dark rounded-full hover:bg-surface-light dark:hover:bg-surface-dark">
+              <span class="material-symbols-outlined text-2xl">more_vert</span>
+            </button>
+            <button class="btn-save-conversation flex max-w-[480px] cursor-pointer items-center justify-center overflow-hidden rounded-full
+                           h-10 bg-primary text-white gap-2 text-sm font-bold leading-normal tracking-[0.015em] min-w-0 px-4">
+              <span class="material-symbols-outlined text-xl">save</span>
+              <span class="truncate">保存对话</span>
+            </button>
+          </div>
+        </header>
+
+        <div class="conversation-messages flex-1 overflow-y-auto p-4 md:p-6 space-y-6">
+          <!-- 消息内容将通过JavaScript动态加载 -->
+        </div>
+
+        <div class="flex justify-center py-4">
+          <button class="btn-add-message flex items-center gap-2 px-4 py-2 text-sm font-bold rounded-full border border-dashed
+                         border-text-muted-light dark:border-text-muted-dark text-text-muted-light dark:text-text-muted-dark
+                         hover:bg-surface-light dark:hover:bg-surface-dark hover:border-solid hover:text-text-light dark:hover:text-text-dark">
+            <span class="material-symbols-outlined text-lg">add</span>
+            添加消息
+          </button>
+        </div>
+      </div>
+    </main>
+
+    <!-- 右侧AI分析面板 -->
+    <aside class="w-80 flex-shrink-0 border-l border-surface-light dark:border-surface-dark/40 bg-background-light dark:bg-background-dark" id="ai-panel">
+      <div class="p-6">
+        <h2 class="text-lg font-bold text-text-light dark:text-text-dark mb-6">AI 分析与编辑</h2>
+        <div class="space-y-6">
+          <!-- AI洞察 -->
+          <div id="ai-insights">
+            <h3 class="block text-base font-semibold text-text-light dark:text-text-dark mb-3">AI 洞察</h3>
+            <div class="flex flex-col gap-2 text-sm p-4 rounded-lg bg-surface-light dark:bg-surface-dark">
+              <div class="insight-item flex items-start gap-2.5">
+                <span class="material-symbols-outlined text-lg text-yellow-600 dark:text-yellow-400 mt-0.5">auto_awesome</span>
+                <p class="insight-text text-text-muted-light dark:text-text-muted-dark">
+                  这个回应非常有效。通过提出一起散步的建议，你主动推进了关系。这是一个关键的积极转折点。
+                </p>
+              </div>
+              <div class="insight-item flex items-start gap-2.5">
+                <span class="material-symbols-outlined text-lg text-green-600 dark:text-green-400 mt-0.5">thumb_up</span>
+                <p class="insight-text text-text-muted-light dark:text-text-muted-dark">
+                  建议：继续保持主动，可以提出一个具体的见面地点，展现你的体贴。
+                </p>
+              </div>
+            </div>
+          </div>
+
+          <!-- 编辑消息 -->
+          <div id="message-editor">
+            <label class="block text-sm font-medium text-text-muted-light dark:text-text-muted-dark mb-2" for="message-content">
+              编辑消息
+            </label>
+            <textarea class="w-full rounded border-surface-light dark:border-surface-dark bg-transparent
+                           focus:ring-primary focus:border-primary text-text-light dark:text-text-dark
+                           px-3 py-2 text-sm" id="message-content" rows="3"
+                      placeholder="选择一条消息进行编辑..."></textarea>
+            <div class="flex justify-end mt-2">
+              <button class="px-3 py-1 text-xs bg-primary text-white rounded-full" id="btn-update-message">
+                更新
+              </button>
+            </div>
+          </div>
+
+          <!-- 对话分类 -->
+          <div id="conversation-categories">
+            <label class="block text-sm font-medium text-text-muted-light dark:text-text-muted-dark mb-2">
+              对话分类
+            </label>
+            <div class="flex flex-wrap gap-2 mt-2" id="selected-tags">
+              <span class="inline-flex items-center gap-1 bg-blue-100 dark:bg-blue-900/40
+                         text-blue-700 dark:text-blue-300 text-xs font-semibold px-2.5 py-1 rounded-full">
+                愉快
+                <button class="ml-1 hover:text-red-500" onclick="removeTag(this)">
+                  <span class="material-symbols-outlined text-sm">close</span>
+                </button>
+              </span>
+              <span class="inline-flex items-center gap-1 bg-pink-100 dark:bg-pink-900/40
+                         text-pink-700 dark:text-pink-300 text-xs font-semibold px-2.5 py-1 rounded-full">
+                心动
+                <button class="ml-1 hover:text-red-500" onclick="removeTag(this)">
+                  <span class="material-symbols-outlined text-sm">close</span>
+                </button>
+              </span>
+            </div>
+
+            <h4 class="text-xs font-semibold text-text-muted-light dark:text-text-muted-dark mt-4 mb-2">
+              AI 建议分类
+            </h4>
+            <div class="flex flex-wrap gap-2" id="suggested-tags">
+              <button class="suggested-tag flex items-center gap-1.5 px-2.5 py-1 text-xs font-medium rounded-full
+                           bg-surface-light dark:bg-surface-dark hover:bg-primary/20 hover:text-primary"
+                      data-tag="约会提议">
+                <span class="material-symbols-outlined text-sm">add</span>
+                约会提议
+              </button>
+              <button class="suggested-tag flex items-center gap-1.5 px-2.5 py-1 text-xs font-medium rounded-full
+                           bg-surface-light dark:bg-surface-dark hover:bg-primary/20 hover:text-primary"
+                      data-tag="积极回应">
+                <span class="material-symbols-outlined text-sm">add</span>
+                积极回应
+              </button>
+              <button class="suggested-tag flex items-center gap-1.5 px-2.5 py-1 text-xs font-medium rounded-full
+                           bg-surface-light dark:bg-surface-dark hover:bg-primary/20 hover:text-primary"
+                      data-tag="关系推进">
+                <span class="material-symbols-outlined text-sm">add</span>
+                关系推进
+              </button>
+            </div>
+          </div>
+        </div>
+      </div>
+    </aside>
+  </div>
+
+  <script src="./js/renderer.js"></script>
+</body>
+</html>

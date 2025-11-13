@@ -1,6 +1,7 @@
 *.iml
 .gradle
-/local.properties
+/local.
+/desktop/node_modules
 .DS_Store
 /build
 /captures

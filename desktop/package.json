@@ -1,0 +1,45 @@
+{
+  "name": "livegalgame-desktop",
+  "version": "0.1.0",
+  "description": "LiveGalGame Desktop - 实时对话辅助与学习工具",
+  "main": "src/main.js",
+  "scripts": {
+    "dev": "electron . --enable-logging",
+    "build": "electron-builder",
+    "build:win": "electron-builder --win",
+    "build:mac": "electron-builder --mac"
+  },
+  "keywords": [
+    "electron",
+    "conversation",
+    "ai-assistant",
+    "desktop"
+  ],
+  "author": "LiveGalGame Team",
+  "license": "MIT",
+  "devDependencies": {
+    "electron": "^33.2.0",
+    "electron-builder": "^25.1.8"
+  },
+  "dependencies": {
+    "electron-store": "^8.2.0"
+  },
+  "build": {
+    "appId": "com.livegalgame.desktop",
+    "productName": "LiveGalGame Desktop",
+    "directories": {
+      "output": "dist"
+    },
+    "files": [
+      "src/**/*",
+      "assets/**/*",
+      "node_modules/**/*"
+    ],
+    "mac": {
+      "category": "public.app-category.productivity"
+    },
+    "win": {
+      "target": "nsis"
+    }
+  }
+}
