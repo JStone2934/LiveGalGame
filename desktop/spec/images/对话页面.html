@@ -1,0 +1,251 @@
+<!DOCTYPE html>
+<html class="light" lang="zh"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>LiveGalGame - 对话编辑器</title>
+<link href="https://fonts.googleapis.com" rel="preconnect"/>
+<link crossorigin="" href="https://fonts.gstatic.com" rel="preconnect"/>
+<link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Noto+Sans+SC:wght@400;500;700&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined" rel="stylesheet"/>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<script id="tailwind-config">
+        tailwind.config = {
+            darkMode: "class",
+            theme: {
+                extend: {
+                    colors: {
+                        "primary": "#c51662",
+                        "background-light": "#f8f6f7",
+                        "background-dark": "#211118",
+                        "text-light": "#1b0e14",
+                        "text-dark": "#f8f6f7",
+                        "text-muted-light": "#974e6e",
+                        "text-muted-dark": "#a88e99",
+                        "surface-light": "#f3e7ec",
+                        "surface-dark": "#3a242d",
+                        "ai-highlight": "rgba(255, 215, 0, 0.25)"
+                    },
+                    fontFamily: {
+                        "display": ["Plus Jakarta Sans", "Noto Sans SC", "sans-serif"]
+                    },
+                    borderRadius: {
+                        "DEFAULT": "1rem",
+                        "lg": "2rem",
+                        "xl": "3rem",
+                        "full": "9999px"
+                    },
+                },
+            },
+        }
+    </script>
+<style type="text/tailwindcss">
+        body {
+            @apply font-display bg-background-light dark:bg-background-dark text-text-light dark:text-text-dark;
+        }
+    </style>
+</head>
+<body class="min-h-screen">
+<div class="flex h-screen w-full flex-row">
+<aside class="w-72 flex-shrink-0 border-r border-surface-light dark:border-surface-dark/40 bg-background-light dark:bg-background-dark">
+<div class="flex h-full flex-col justify-between p-4">
+<div class="flex flex-col gap-4">
+<div class="flex items-center gap-3 px-2">
+<div class="bg-center bg-no-repeat aspect-square bg-cover rounded-full size-10" data-alt="Application logo with abstract shapes" style='background-image: url("https://lh3.googleusercontent.com/aida-public/AB6AXuC1Y7Jb-wm2KMH_qZgdVNVzjHMz4hycOeOrLeuGjO3Ex4uPrDNq5soB4uGEG58hwXWeKR2lOUj4DvjWhFvp4rXMenuuskG853OPNZA1dQ5M1YOHB0j8ddBEVj8iW6DdU96o1A5jA_I7uolWYEekaTnap9cdfSZeZjQog_vT66y859yhBnY7dojgllrwNNrMmr0UuLdlcjoKNYfH-_4lsvCyZ8bCpupQOBmOrcwlO3wIe6FKFOuE-HKHZUwpHsexqgqcCHnq7j0e1H0");'></div>
+<div class="flex flex-col">
+<h1 class="text-text-light dark:text-text-dark text-base font-bold leading-normal">LiveGalGame</h1>
+<p class="text-text-muted-light dark:text-text-muted-dark text-sm font-normal leading-normal">对话管理器</p>
+</div>
+</div>
+<div class="relative px-2">
+<input class="w-full h-9 px-4 pl-10 text-sm rounded-full border-none bg-surface-light dark:bg-surface-dark focus:ring-2 focus:ring-primary/50 text-text-light dark:text-text-dark placeholder:text-text-muted-light dark:placeholder:text-text-muted-dark" placeholder="搜索对话..." type="text"/>
+<span class="material-symbols-outlined absolute left-5 top-1/2 -translate-y-1/2 text-text-muted-light dark:text-text-muted-dark text-lg">search</span>
+</div>
+<div class="flex flex-col gap-1 mt-2">
+<div class="flex items-center gap-3 px-3 py-2 rounded-full bg-surface-light dark:bg-surface-dark cursor-pointer">
+<div class="bg-center bg-no-repeat aspect-square bg-cover rounded-full size-8 shrink-0" data-alt="Avatar for character Miyu" style='background-image: url("https://lh3.googleusercontent.com/aida-public/AB6AXuCKveDjML1aZRbf0gda66O0D2GO76FfXQgfK7hsL5udOywQbdQHokYrQTnvMbJli40JAGN34lLXETYEGlx-jlqw5Ac5g4DWRDGo36KcjnvOkAeavuXhuytm_oKvlsL_sgG9uw7URzI_VssjSdykvFbBJ7gwsnlWqvlDRjlkxKScClIj1C6aeIwFHk86m5MtgmsTM4zw2PdbGX5yWU7CTR4YriitGOt9IcBNVvY7x1gcNevGt3HGWsW2Vi8eeETTcO2xw5WYhU6KUXo");'></div>
+<div class="flex-grow overflow-hidden">
+<p class="text-text-light dark:text-text-dark text-sm font-medium leading-normal truncate">Miyu</p>
+<p class="text-text-muted-light dark:text-text-muted-dark text-xs truncate">哦，真的吗？我刚才还在想...</p>
+</div>
+</div>
+<div class="flex items-center gap-3 px-3 py-2 rounded-full hover:bg-surface-light dark:hover:bg-surface-dark cursor-pointer">
+<div class="bg-center bg-no-repeat aspect-square bg-cover rounded-full size-8 shrink-0" data-alt="Avatar for character Akira" style='background-image: url("https://lh3.googleusercontent.com/aida-public/AB6AXuAi_l0htwaJysJn5blKhGhgIIGSgA5IQwWhg7fw5HBAnBpH674Hrgr2x0J8C6nmLXwA-76Xcwpcxbj8UQN8Hj5M0Kda1PBn2h2GKjfmnt1ZBP8-BniLxXuRx4aMc_uC-YFWkT1s9MDyQAWSm1UO5OKzFtTYDvdfya156jVdat7pXr8X5fNg-xBcYf5WjrboGdl55ggqZ_V-EWoPopztVUz7GYpr4B7Rz2g2DUSslmRwqH_-i0s3WFx87loFgcdBoztsDxCTBOapYNI");'></div>
+<div class="flex-grow overflow-hidden">
+<p class="text-text-light dark:text-text-dark text-sm font-medium leading-normal truncate">Akira</p>
+<p class="text-text-muted-light dark:text-text-muted-dark text-xs truncate">别忘了我们的约定！</p>
+</div>
+</div>
+<div class="flex items-center gap-3 px-3 py-2 rounded-full hover:bg-surface-light dark:hover:bg-surface-dark cursor-pointer">
+<div class="bg-center bg-no-repeat aspect-square bg-cover rounded-full size-8 shrink-0" data-alt="Avatar for character Hana" style='background-image: url("https://lh3.googleusercontent.com/aida-public/AB6AXuDFX9WYdeva7mxQgKgp26AMjZp57DV3pmYeBtoMo-BVgjdjwY9SnI5SSS7cdLB3FWpwtlVH8gXsT7JkY2rDbIbSlvvmAmlMnSDfcBRSbjGGEM3e-narSrXReUh0QNxLn1HfmYi0tEPAZXvXQ-37mlh6WIz6_BNJlzNgtIkeN7y4vQbZ2IzeJsFFGgoCkqcgHjQWW-PsPD-2D9O9NGrHp6MBmbr6cWiDeFNyvEAW0sWrFXjW1YT1NnjkdOf491YELTwWvuNgaZwMfYI");'></div>
+<div class="flex-grow overflow-hidden">
+<p class="text-text-light dark:text-text-dark text-sm font-medium leading-normal truncate">Hana</p>
+<p class="text-text-muted-light dark:text-text-muted-dark text-xs truncate">我今天发现了一家超可爱的小咖啡馆。</p>
+</div>
+</div>
+<div class="flex items-center gap-3 px-3 py-2 rounded-full hover:bg-surface-light dark:hover:bg-surface-dark cursor-pointer">
+<div class="bg-center bg-no-repeat aspect-square bg-cover rounded-full size-8 shrink-0" data-alt="Avatar for character Yuki" style='background-image: url("https://lh3.googleusercontent.com/aida-public/AB6AXuAqTBTNR0Hya756GoVbagaIsTxAiUWrzBd2Y4Y4N3KeZ8z50Rrxcqs40UyCYYgUp9O6CsiwR1yeZoVGUM-Dxt-oB1VEYGa5vqHteazzqRGe1ZWZcomA5UZYpz20DULJ4dhjZo-BcfTUU0WnNg8Mm79OIyAZl9dxrI54Xzsuf8kyebwVlZXBaDKM_G0vnLSYL7f6xp0fHXmBFHpR1PKbGCQbTdwdVOa4CTsa15_HextPTULp7O43-7R4FUYC7QajyW87Yk1QsHdTEs8");'></div>
+<div class="flex-grow overflow-hidden">
+<p class="text-text-light dark:text-text-dark text-sm font-medium leading-normal truncate">Yuki</p>
+<p class="text-text-muted-light dark:text-text-muted-dark text-xs truncate">我听到的可不是这样...</p>
+</div>
+</div>
+</div>
+</div>
+<div class="flex flex-col gap-4">
+<button class="flex min-w-[84px] w-full cursor-pointer items-center justify-center overflow-hidden rounded-full h-10 px-4 bg-primary text-white text-sm font-bold leading-normal tracking-[0.015em]">
+<span class="truncate">新对话</span>
+</button>
+<div class="flex flex-col gap-1">
+<div class="flex items-center gap-3 px-3 py-2 rounded-full hover:bg-surface-light dark:hover:bg-surface-dark cursor-pointer">
+<span class="material-symbols-outlined text-text-light dark:text-text-dark text-2xl">settings</span>
+<p class="text-text-light dark:text-text-dark text-sm font-medium leading-normal">设置</p>
+</div>
+<div class="flex items-center gap-3 px-3 py-2 rounded-full hover:bg-surface-light dark:hover:bg-surface-dark cursor-pointer">
+<span class="material-symbols-outlined text-text-light dark:text-text-dark text-2xl">help_center</span>
+<p class="text-text-light dark:text-text-dark text-sm font-medium leading-normal">帮助</p>
+</div>
+</div>
+</div>
+</div>
+</aside>
+<main class="flex flex-1 flex-col bg-background-light dark:bg-background-dark/50">
+<header class="flex h-16 flex-shrink-0 items-center justify-between gap-2 border-b border-surface-light dark:border-surface-dark/40 px-6 py-3">
+<div class="flex items-center gap-3">
+<div class="bg-center bg-no-repeat aspect-square bg-cover rounded-full size-9" data-alt="Avatar for character Miyu" style='background-image: url("https://lh3.googleusercontent.com/aida-public/AB6AXuAHCswmW0SLFYCG9NbBTtv_7puFsy50ti-icbdgJkuoyCX9d4aZu_amOKYXgjDVJQ95zwvkYcbk9vxa7bvnqeiZBRM5kVXdv7Tqeywp-tcds_jYMimRKlvTqMgiY2-ytSAQ5Cq0qGQyoSxqpkiitCAcGosQtaPbLTxFZMM007aBJKhMoQihyO-jBzCdph2nwJmhf4RKXaa7PFxqcIN-stKXtGoa6fUlj73eyaIUPA3-6tfyWAL_OoP9urx8ckwM44czVZ-6TT1RZBQ");'></div>
+<div class="flex flex-col">
+<h1 class="text-text-light dark:text-text-dark text-lg font-bold leading-tight tracking-[-0.015em]">与 Miyu 的对话<span class="text-primary">*</span></h1>
+<div class="flex items-center gap-2">
+<span class="inline-flex items-center gap-1.5 bg-blue-100 dark:bg-blue-900/40 text-blue-700 dark:text-blue-300 text-xs font-medium px-2 py-0.5 rounded-full"><span class="material-symbols-outlined text-sm">mood</span><span>愉快</span></span>
+<span class="inline-flex items-center gap-1.5 bg-green-100 dark:bg-green-900/40 text-green-700 dark:text-green-300 text-xs font-medium px-2 py-0.5 rounded-full"><span class="material-symbols-outlined text-sm">local_florist</span><span>日常</span></span>
+</div>
+</div>
+</div>
+<div class="flex items-center gap-2">
+<button class="p-2 text-text-light dark:text-text-dark rounded-full hover:bg-surface-light dark:hover:bg-surface-dark">
+<span class="material-symbols-outlined text-2xl">history</span>
+</button>
+<button class="p-2 text-text-light dark:text-text-dark rounded-full hover:bg-surface-light dark:hover:bg-surface-dark">
+<span class="material-symbols-outlined text-2xl">more_vert</span>
+</button>
+<button class="flex max-w-[480px] cursor-pointer items-center justify-center overflow-hidden rounded-full h-10 bg-primary text-white gap-2 text-sm font-bold leading-normal tracking-[0.015em] min-w-0 px-4">
+<span class="material-symbols-outlined text-xl">save</span>
+<span class="truncate">保存对话</span>
+</button>
+</div>
+</header>
+<div class="flex-1 overflow-y-auto p-4 md:p-6 space-y-6">
+<div class="flex items-end gap-3 max-w-xl">
+<div class="bg-center bg-no-repeat aspect-square bg-cover rounded-full w-10 shrink-0" data-alt="Avatar for character Miyu" style='background-image: url("https://lh3.googleusercontent.com/aida-public/AB6AXuDL4oS9Ln4pi45jxk0QLZKceoDkzrQ_t7yaJ0O75GTh95OcPWpuV-9hgqnN2-RJ7xHlhgUo7OHCoxaGDFvNu09GL443OHsyW1sN3ySoOsHwlJtVFpHGVsHN0W1HuYqCKexCPY-cwPpnyR4boe1LF_g_rQUrD_sGmObjshTcqk7ote4crmARNBT30tcpRdjo2dFPknbnIsTctnAoVVVbiqBGH6AjvGTwVu2KqADNZLOxode4nh78Njo-vYRHR9_BjUpLcyeDTEPIJiI");'></div>
+<div class="flex flex-col gap-1 items-start">
+<p class="text-text-muted-light dark:text-text-muted-dark text-sm font-medium leading-normal px-1">攻略对象</p>
+<div class="relative group">
+<p class="text-base font-normal leading-normal rounded-2xl rounded-bl-md px-4 py-3 bg-surface-light dark:bg-surface-dark text-text-light dark:text-text-dark">哦，真的吗？我刚才还在想，待会儿要不要去散散步。这个季节的樱花应该很美。</p>
+<div class="absolute -right-2 top-1/2 -translate-y-1/2 opacity-0 group-hover:opacity-100 transition-opacity">
+<button class="p-1.5 rounded-full bg-background-light dark:bg-background-dark hover:bg-primary/20"><span class="material-symbols-outlined text-lg">edit</span></button>
+</div>
+</div>
+</div>
+</div>
+<div class="flex items-end gap-3 justify-end ml-auto max-w-xl">
+<div class="flex flex-col gap-1 items-end">
+<p class="text-text-muted-light dark:text-text-muted-dark text-sm font-medium leading-normal px-1">我</p>
+<div class="relative group">
+<p class="text-base font-normal leading-normal rounded-2xl rounded-br-md px-4 py-3 bg-primary text-white">听起来真不错！也许我们可以一起去？</p>
+<div class="absolute -left-2 top-1/2 -translate-y-1/2 opacity-0 group-hover:opacity-100 transition-opacity">
+<button class="p-1.5 rounded-full bg-background-light dark:bg-background-dark hover:bg-primary/20"><span class="material-symbols-outlined text-lg">edit</span></button>
+</div>
+</div>
+</div>
+</div>
+<div class="flex flex-col gap-2 max-w-xl">
+<div class="flex items-end gap-3">
+<div class="bg-center bg-no-repeat aspect-square bg-cover rounded-full w-10 shrink-0" data-alt="Avatar for character Miyu" style='background-image: url("https://lh3.googleusercontent.com/aida-public/AB6AXuAtR6AStTAVQTCeKhJMM8Plij47y6KGiYyVrrjXsFDGWrP9TqbbjgfXNd5lwsfs1YU-p6PJilEbIvJNSVljm6vERyVOGh40A4W6sodC83RFuN-cJjdTh6ejbeMo9KN3jndwe_jVokrC8w2hs68hZnV0sRnZUPBEtfmXIkq959n2We3RKhp8zrdZfTBKFX6ucJ-Z6VAvNIO6LqDfCj8qf40tAoDmaARJ_NiftWVnlKOtwlNnnDrv4pLuvLg1jX-X5KVyRfVU-Z3GN2o");'></div>
+<div class="flex flex-col gap-1 items-start">
+<p class="text-text-muted-light dark:text-text-muted-dark text-sm font-medium leading-normal px-1">攻略对象</p>
+<div class="relative group">
+<p class="text-base font-normal leading-normal rounded-2xl rounded-bl-md px-4 py-3 bg-surface-light dark:bg-surface-dark text-text-light dark:text-text-dark">
+<span class="bg-ai-highlight p-0.5 rounded-md">我当然愿意！</span> 我们在哪里见面好呢？
+</p>
+<div class="absolute -right-2 top-1/2 -translate-y-1/2 opacity-0 group-hover:opacity-100 transition-opacity">
+<button class="p-1.5 rounded-full bg-background-light dark:bg-background-dark hover:bg-primary/20"><span class="material-symbols-outlined text-lg">edit</span></button>
+</div>
+</div>
+</div>
+</div>
+<div class="flex items-center gap-3 pl-12">
+<div class="flex items-center gap-2 text-sm text-yellow-600 dark:text-yellow-400">
+<span class="material-symbols-outlined text-lg">auto_awesome</span>
+<p class="font-medium">AI分析：积极回应！对方接受了你的邀请，表明好感度提升。</p>
+</div>
+<div class="flex items-center gap-1.5">
+<span class="inline-flex items-center gap-1.5 bg-blue-100 dark:bg-blue-900/40 text-blue-700 dark:text-blue-300 text-xs font-medium px-2 py-0.5 rounded-full"><span class="material-symbols-outlined text-sm">mood</span><span>愉快</span></span>
+<span class="inline-flex items-center gap-1.5 bg-pink-100 dark:bg-pink-900/40 text-pink-700 dark:text-pink-300 text-xs font-medium px-2 py-0.5 rounded-full"><span class="material-symbols-outlined text-sm">favorite</span><span>心动</span></span>
+</div>
+</div>
+</div>
+<div class="flex justify-center py-4">
+<button class="flex items-center gap-2 px-4 py-2 text-sm font-bold rounded-full border border-dashed border-text-muted-light dark:border-text-muted-dark text-text-muted-light dark:text-text-muted-dark hover:bg-surface-light dark:hover:bg-surface-dark hover:border-solid hover:text-text-light dark:hover:text-text-dark">
+<span class="material-symbols-outlined text-lg">add</span>
+                        添加消息
+                    </button>
+</div>
+</div>
+</main>
+<aside class="w-80 flex-shrink-0 border-l border-surface-light dark:border-surface-dark/40 bg-background-light dark:bg-background-dark">
+<div class="p-6">
+<h2 class="text-lg font-bold text-text-light dark:text-text-dark mb-6">AI 分析与编辑</h2>
+<div class="space-y-6">
+<div>
+<h3 class="block text-base font-semibold text-text-light dark:text-text-dark mb-3">AI 洞察</h3>
+<div class="flex flex-col gap-2 text-sm p-4 rounded-lg bg-surface-light dark:bg-surface-dark">
+<div class="flex items-start gap-2.5">
+<span class="material-symbols-outlined text-lg text-yellow-600 dark:text-yellow-400 mt-0.5">auto_awesome</span>
+<p class="text-text-muted-light dark:text-text-muted-dark">这个回应非常有效。通过提出一起散步的建议，你主动推进了关系。这是一个关键的积极转折点。</p>
+</div>
+<div class="flex items-start gap-2.5">
+<span class="material-symbols-outlined text-lg text-green-600 dark:text-green-400 mt-0.5">thumb_up</span>
+<p class="text-text-muted-light dark:text-text-muted-dark">建议：继续保持主动，可以提出一个具体的见面地点，展现你的体贴。</p>
+</div>
+</div>
+</div>
+<div>
+<label class="block text-sm font-medium text-text-muted-light dark:text-text-muted-dark mb-2" for="message-content">编辑消息</label>
+<textarea class="w-full rounded border-surface-light dark:border-surface-dark bg-transparent focus:ring-primary focus:border-primary text-text-light dark:text-text-dark" id="message-content" rows="3">我当然愿意！我们哪里见面好呢？</textarea>
+</div>
+<div>
+<label class="block text-sm font-medium text-text-muted-light dark:text-text-muted-dark mb-2" for="categories">对话分类</label>
+<div class="relative">
+<select class="w-full rounded-full border-surface-light dark:border-surface-dark bg-transparent focus:ring-primary focus:border-primary text-text-light dark:text-text-dark" id="categories">
+<option>情感基调</option>
+<option>愉快</option>
+<option>悲伤</option>
+<option>紧张</option>
+<option>浪漫</option>
+</select>
+</div>
+<div class="mt-3">
+<label class="block text-sm font-medium text-text-muted-light dark:text-text-muted-dark mb-2" for="theme">主题标签</label>
+<div class="relative">
+<input class="w-full h-10 px-4 text-sm rounded-full border-surface-light dark:border-surface-dark bg-transparent focus:ring-primary focus:border-primary text-text-light dark:text-text-dark" id="theme" placeholder="例如 #日常 #关键剧情" type="text"/>
+</div>
+<div class="mt-4">
+<h4 class="text-xs font-semibold text-text-muted-light dark:text-text-muted-dark mb-2">AI 建议分类</h4>
+<div class="flex flex-wrap gap-2">
+<button class="flex items-center gap-1.5 px-2.5 py-1 text-xs font-medium rounded-full bg-surface-light dark:bg-surface-dark hover:bg-primary/20 hover:text-primary"><span class="material-symbols-outlined text-sm">add</span>愉快</button>
+<button class="flex items-center gap-1.5 px-2.5 py-1 text-xs font-medium rounded-full bg-surface-light dark:bg-surface-dark hover:bg-primary/20 hover:text-primary"><span class="material-symbols-outlined text-sm">add</span>心动</button>
+<button class="flex items-center gap-1.5 px-2.5 py-1 text-xs font-medium rounded-full bg-surface-light dark:bg-surface-dark hover:bg-primary/20 hover:text-primary"><span class="material-symbols-outlined text-sm">add</span>约会提议</button>
+</div>
+</div>
+<div class="flex flex-wrap gap-2 mt-4">
+<span class="inline-flex items-center gap-1 bg-blue-100 dark:bg-blue-900/40 text-blue-700 dark:text-blue-300 text-xs font-semibold px-2.5 py-1 rounded-full">愉快<button><span class="material-symbols-outlined text-sm ml-1">close</span></button></span>
+<span class="inline-flex items-center gap-1 bg-pink-100 dark:bg-pink-900/40 text-pink-700 dark:text-pink-300 text-xs font-semibold px-2.5 py-1 rounded-full">心动<button><span class="material-symbols-outlined text-sm ml-1">close</span></button></span>
+<span class="inline-flex items-center gap-1 bg-primary/20 text-primary-darker text-xs font-semibold px-2.5 py-1 rounded-full">#约会提议<button><span class="material-symbols-outlined text-sm ml-1">close</span></button></span>
+</div>
+</div>
+</div>
+</div>
+</div>
+</aside>
+</div>
+</body></html>

@@ -14,59 +14,99 @@
 
     body {
       font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Inter', 'Noto Sans SC', sans-serif;
-      overflow: hidden;
+      overflow: auto;
       background: transparent;
+      width: 100%;
+      height: 100%;
+      margin: 0;
+      padding: 0;
+      /* 确保窗口边缘可以用于调整大小 */
+      -webkit-app-region: no-drag;
+    }
+    
+    /* 窗口边缘区域用于调整大小 */
+    body::before {
+      content: '';
+      position: fixed;
+      top: 0;
+      left: 0;
+      right: 0;
+      bottom: 0;
+      pointer-events: none;
+      z-index: -1;
     }
 
     .hud-container {
-      background: rgba(255, 255, 255, 0.85);
-      backdrop-filter: blur(10px);
-      border-radius: 16px;
-      border: 1px solid rgba(197, 22, 98, 0.2);
-      box-shadow: 0 8px 32px rgba(0, 0, 0, 0.1);
-      padding: 16px;
-      margin: 10px;
+      background: rgba(255, 255, 255, 0.7);
+      backdrop-filter: blur(20px);
+      border-radius: 20px;
+      border: 1px solid rgba(255, 255, 255, 0.4);
+      box-shadow: 0 8px 32px rgba(0, 0, 0, 0.2),
+                  inset 0 0 12px rgba(255, 255, 255, 0.1);
+      padding: 20px;
+      margin: 0;
       transition: all 0.3s ease;
+      width: 100%;
+      height: 100%;
+      box-sizing: border-box;
     }
 
     .hud-container:hover {
-      box-shadow: 0 12px 40px rgba(0, 0, 0, 0.15);
+      box-shadow: 0 12px 40px rgba(0, 0, 0, 0.25),
+                  inset 0 0 16px rgba(255, 255, 255, 0.12);
+      border-color: rgba(255, 255, 255, 0.5);
     }
 
     .dark .hud-container {
-      background: rgba(42, 22, 31, 0.85);
-      border-color: rgba(197, 22, 98, 0.3);
+      background: rgba(15, 23, 42, 0.6);
+      border-color: rgba(255, 255, 255, 0.3);
     }
 
     .transcript-area {
-      max-height: 120px;
+      max-height: 160px;
       overflow-y: auto;
       font-size: 14px;
       line-height: 1.4;
     }
 
-    .transcript-item {
+    .message-item {
       margin-bottom: 8px;
-      padding: 6px 8px;
-      border-radius: 8px;
-      background: rgba(243, 231, 236, 0.5);
+      display: flex;
     }
 
-    .dark .transcript-item {
-      background: rgba(64, 38, 52, 0.5);
+    .message-other {
+      justify-content: flex-start;
     }
 
-    .transcript-user {
+    .message-user {
+      justify-content: flex-end;
+    }
+
+    .message-bubble {
+      max-width: 80%;
+      padding: 8px 12px;
+      border-radius: 12px;
+      word-wrap: break-word;
+    }
+
+    .message-other .message-bubble {
+      background: rgba(255, 255, 255, 0.4);
+      color: #2d3748;
+    }
+
+    .message-user .message-bubble {
+      background: rgba(197, 22, 98, 0.15);
       color: #c51662;
-      font-weight: 500;
     }
 
-    .transcript-other {
-      color: #4a5568;
-    }
-
-    .dark .transcript-other {
+    .dark .message-other .message-bubble {
+      background: rgba(30, 41, 59, 0.5);
       color: #e2e8f0;
+    }
+
+    .dark .message-user .message-bubble {
+      background: rgba(197, 22, 98, 0.25);
+      color: #f8d7e6;
     }
 
     .suggestion-card {
@@ -91,6 +131,13 @@
       margin-bottom: 12px;
       padding-bottom: 8px;
       border-bottom: 1px solid rgba(0, 0, 0, 0.05);
+    }
+
+    #drag-area {
+      user-select: none;
+      -webkit-user-select: none;
+      pointer-events: auto;
+      flex: 1;
     }
 
     .dark .header {
@@ -121,6 +168,8 @@
       justify-content: center;
       font-size: 16px;
       transition: all 0.2s ease;
+      pointer-events: auto;
+      z-index: 10;
     }
 
     .control-btn:hover {
@@ -162,42 +211,30 @@
   <div class="hud-container">
     <!-- 头部 -->
     <div class="header">
-      <div style="display: flex; align-items: center;">
+      <div style="display: flex; align-items: center; cursor: grab;" id="drag-area">
         <span class="status-indicator"></span>
-        <span class="title">LiveGalGame 助手</span>
       </div>
       <div class="controls">
-        <button class="control-btn" id="minimize-btn" title="最小化">−</button>
         <button class="control-btn" id="close-btn" title="关闭">×</button>
       </div>
     </div>
 
     <!-- 转录区域 -->
     <div class="section">
-      <div class="section-title">实时转录</div>
-
-      <div class="mb-3">
-        <div class="section-title" style="font-size: 11px; color: #c51662;">对方</div>
-        <div class="transcript-area" id="other-transcript">
-          <div class="transcript-item">
-            <span class="transcript-other">哦，真的吗？我刚才还在想，待会儿要不要去散散步。这个季节的樱花应该很美。</span>
-          </div>
+      <div class="transcript-area" id="transcript-messages">
+        <!-- 对方消息（左对齐） -->
+        <div class="message-item message-other">
+          <div class="message-bubble">哦，真的吗？我刚才还在想，待会儿要不要去散散步。这个季节的樱花应该很美。</div>
         </div>
-      </div>
-
-      <div>
-        <div class="section-title" style="font-size: 11px; color: #c51662;">我</div>
-        <div class="transcript-area" id="user-transcript">
-          <div class="transcript-item">
-            <span class="transcript-user">听起来真不错！也许我们可以一起去？</span>
-          </div>
+        <!-- 我的消息（右对齐） -->
+        <div class="message-item message-user">
+          <div class="message-bubble">听起来真不错！也许我们可以一起去？</div>
         </div>
       </div>
     </div>
 
     <!-- AI建议 -->
     <div class="section" style="margin-top: 16px;">
-      <div class="section-title">AI 建议</div>
       <div id="suggestions-area">
         <div class="suggestion-card">
           <div style="display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 6px;">
@@ -227,27 +264,98 @@
   </div>
 
   <script>
-    // 最小化HUD
-    document.getElementById('minimize-btn').addEventListener('click', () => {
-      console.log('Minimize HUD');
-      // 实际实现中，这里会最小化HUD或隐藏到托盘
-    });
-
     // 关闭HUD
     document.getElementById('close-btn').addEventListener('click', () => {
-      console.log('Close HUD');
-      window.close();
+      console.log('Close HUD - calling window.electronAPI.closeHUD()');
+      if (window.electronAPI) {
+        window.electronAPI.closeHUD();
+      } else {
+        console.error('electronAPI not available');
+      }
     });
 
     // 点击建议卡片
     document.querySelectorAll('.suggestion-card').forEach(card => {
       card.addEventListener('click', () => {
         console.log('Suggestion clicked');
-        // 这里可以实现：复制建议文本、发送给主窗口等
       });
     });
 
-    console.log('HUD loaded');
+    // 拖拽功能 - 使用electronAPI的IPC方法
+    // 参考：https://zhuanlan.zhihu.com/p/112564936
+    const dragArea = document.getElementById('drag-area');
+    let isDragging = false;
+    let startPos = { x: 0, y: 0 };
+
+    console.log('Setting up drag handlers');
+    console.log('electronAPI available:', !!window.electronAPI);
+    console.log('dragArea element:', dragArea);
+
+    if (!window.electronAPI) {
+      console.error('electronAPI not available - drag will not work');
+    }
+
+    if (!dragArea) {
+      console.error('drag-area element not found!');
+    }
+
+    dragArea.addEventListener('mousedown', (e) => {
+      if (!window.electronAPI) {
+        console.error('electronAPI not available');
+        return;
+      }
+      console.log('Mouse down on drag area', {
+        screenX: e.screenX,
+        screenY: e.screenY,
+        clientX: e.clientX,
+        clientY: e.clientY
+      });
+      isDragging = true;
+      // 使用screenX/Y获取屏幕坐标（Electron中可用）
+      // 如果screenX/Y不可用，使用clientX/Y（虽然不理想，但作为后备方案）
+      const screenX = (e.screenX !== undefined && e.screenX !== null) ? e.screenX : e.clientX;
+      const screenY = (e.screenY !== undefined && e.screenY !== null) ? e.screenY : e.clientY;
+      startPos.x = screenX;
+      startPos.y = screenY;
+      // 发送开始拖拽事件，主进程会记录当前窗口位置和大小
+      console.log('Sending startHUDDrag:', { x: screenX, y: screenY });
+      window.electronAPI.startHUDDrag({ x: screenX, y: screenY });
+      dragArea.style.cursor = 'grabbing';
+      e.preventDefault();
+      e.stopPropagation();
+    });
+
+    document.addEventListener('mousemove', (e) => {
+      if (!isDragging || !window.electronAPI) return;
+      // 发送鼠标移动位置到主进程
+      const screenX = (e.screenX !== undefined && e.screenX !== null) ? e.screenX : e.clientX;
+      const screenY = (e.screenY !== undefined && e.screenY !== null) ? e.screenY : e.clientY;
+      window.electronAPI.updateHUDDrag({ x: screenX, y: screenY });
+    });
+
+    document.addEventListener('mouseup', (e) => {
+      if (!isDragging) return;
+      console.log('Mouse up - ending drag');
+      isDragging = false;
+      dragArea.style.cursor = 'grab';
+      if (window.electronAPI) {
+        window.electronAPI.endHUDDrag();
+      }
+      e.preventDefault();
+      e.stopPropagation();
+    });
+
+    // 防止在拖拽区域外的鼠标抬起事件影响拖拽
+    document.addEventListener('mouseleave', () => {
+      if (isDragging && window.electronAPI) {
+        window.electronAPI.endHUDDrag();
+        isDragging = false;
+        dragArea.style.cursor = 'grab';
+      }
+    });
+
+    console.log('HUD script loaded successfully');
+    console.log('electronAPI available:', !!window.electronAPI);
   </script>
 </body>
 </html>

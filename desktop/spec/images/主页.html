@@ -1,0 +1,230 @@
+<!DOCTYPE html>
+<html class="light" lang="zh"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>LiveGalGame - 总览</title>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<link href="https://fonts.googleapis.com" rel="preconnect"/>
+<link crossorigin="" href="https://fonts.gstatic.com" rel="preconnect"/>
+<link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:ital,wght@0,200..800;1,200..800&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Noto+Sans+SC:wght@400;500;700;900&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined" rel="stylesheet"/>
+<script>
+        tailwind.config = {
+            darkMode: "class",
+            theme: {
+                extend: {
+                    colors: {
+                        "primary": "#c51662",
+                        "background-light": "#f8f6f7",
+                        "background-dark": "#211118",
+                        "text-light": "#1b0e14",
+                        "text-dark": "#f8f6f7",
+                        "text-muted-light": "#974e6e",
+                        "text-muted-dark": "#a88fa0",
+                        "surface-light": "#ffffff",
+                        "surface-dark": "#2a161f",
+                        "border-light": "#f3e7ec",
+                        "border-dark": "#402634",
+                        "primary-subtle-light": "#f3e7ec",
+                        "primary-subtle-dark": "#402634",
+                        "success": "#22c55e",
+                        "warning": "#f59e0b",
+                        "error": "#ef4444",
+                    },
+                    fontFamily: {
+                        "display": ["Plus Jakarta Sans", "'Noto Sans SC'", "sans-serif"]
+                    },
+                    borderRadius: {
+                        "DEFAULT": "1rem",
+                        "lg": "1.5rem",
+                        "xl": "2rem",
+                        "full": "9999px"
+                    },
+                    backgroundImage: {
+                        'sakura-pattern': "url(\"data:image/svg+xml,%3Csvg width='60' height='60' viewBox='0 0 60 60' xmlns='http://www.w3.org/2000/svg'%3E%3Cg fill='none' fill-rule='evenodd'%3E%3Cg fill='%23c51662' fill-opacity='0.03'%3E%3Cpath d='M36 34v-4h-2v4h-4v2h4v4h2v-4h4v-2h-4zm0-30V0h-2v4h-4v2h4v4h2V6h4V4h-4zM6 34v-4H4v4H0v2h4v4h2v-4h4v-2H6zM6 4V0H4v4H0v2h4v4h2V6h4V4H6z'/%3E%3C/g%3E%3C/g%3E%3C/svg%3E\")",
+                    }
+                },
+            },
+        }
+    </script>
+<style>
+        .material-symbols-outlined {
+            font-variation-settings:
+                'FILL' 0,
+                'wght' 400,
+                'GRAD' 0,
+                'opsz' 24;
+            font-size: 24px;
+        }
+    </style>
+</head>
+<body class="bg-background-light dark:bg-background-dark font-display text-text-light dark:text-text-dark bg-sakura-pattern">
+<div class="relative flex min-h-screen w-full">
+<aside class="flex h-screen w-64 flex-col justify-between bg-gradient-to-b from-[#d81b60] to-[#8e24aa] p-4 text-white sticky top-0">
+<div class="flex flex-col gap-6">
+<div class="flex items-center gap-3 px-2">
+<div class="bg-center bg-no-repeat aspect-square bg-cover rounded-full size-10" data-alt="Application logo" style='background-image: url("https://lh3.googleusercontent.com/aida-public/AB6AXuAytgwA-PHuomA-goZ6PgmHc27Dku0Udkp4AU2X8PKvhmNO31wwKEJCrPT06Y5OteG2r72R6tDlkDFSUw9dD8DlgjxpSXNBOdYCNjNPUOW7Sm03B80Zx_JntAa3AjTe1MZGvtbeBNz5FH_j03soaMPBZ_I_S1aMgG4Noz_v8Ka__sbRvoCQXbs50SssmdPVgkre__1MAlmPn5y_WxqxrYelb2pbGbQwxLJBES7gDAK92-5anA6lVHU3ahIJcuj1kUOK8mgvXyIapgY");'></div>
+<div class="flex flex-col">
+<h1 class="text-white text-base font-bold leading-normal">LiveGalGame</h1>
+<p class="text-white/80 text-sm font-normal leading-normal">对话管理器</p>
+</div>
+</div>
+<nav class="flex flex-col gap-2">
+<a class="flex items-center gap-3 px-3 py-2 rounded bg-white/20 text-white" href="#">
+<span class="material-symbols-outlined" style="font-variation-settings: 'FILL' 1;">dashboard</span>
+<p class="text-sm font-medium leading-normal">总览</p>
+</a>
+<a class="flex items-center gap-3 px-3 py-2 rounded text-white/80 hover:bg-white/10 transition-colors" href="#">
+<span class="material-symbols-outlined">groups</span>
+<p class="text-sm font-medium leading-normal">攻略对象</p>
+</a>
+<a class="flex items-center gap-3 px-3 py-2 rounded text-white/80 hover:bg-white/10 transition-colors" href="#">
+<span class="material-symbols-outlined">forum</span>
+<p class="text-sm font-medium leading-normal">对话编辑器</p>
+</a>
+<a class="flex items-center gap-3 px-3 py-2 rounded text-white/80 hover:bg-white/10 transition-colors" href="#">
+<span class="material-symbols-outlined">developer_board</span>
+<p class="text-sm font-medium leading-normal">LLM 配置</p>
+</a>
+<a class="flex items-center gap-3 px-3 py-2 rounded text-white/80 hover:bg-white/10 transition-colors" href="#">
+<span class="material-symbols-outlined">settings</span>
+<p class="text-sm font-medium leading-normal">设置</p>
+</a>
+</nav>
+</div>
+<div class="flex flex-col gap-1">
+<a class="flex items-center gap-3 px-3 py-2 rounded text-white/80 hover:bg-white/10 transition-colors" href="#">
+<span class="material-symbols-outlined">help</span>
+<p class="text-sm font-medium leading-normal">帮助</p>
+</a>
+<a class="flex items-center gap-3 px-3 py-2 rounded text-white/80 hover:bg-white/10 transition-colors" href="#">
+<span class="material-symbols-outlined">logout</span>
+<p class="text-sm font-medium leading-normal">登出</p>
+</a>
+</div>
+</aside>
+<main class="flex-1 p-8">
+<div class="mx-auto max-w-5xl">
+<header class="mb-8">
+<h1 class="text-text-light dark:text-text-dark text-4xl font-black leading-tight tracking-[-0.033em]">欢迎回来！</h1>
+<p class="text-text-muted-light dark:text-text-muted-dark text-base font-normal leading-normal">这是您的对话项目快照。</p>
+</header>
+<div class="mb-8 grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-4">
+<div class="flex items-start gap-4 rounded-xl border border-border-light dark:border-border-dark bg-surface-light dark:bg-surface-dark p-5 shadow-sm">
+<div class="flex size-12 items-center justify-center rounded-lg bg-primary-subtle-light dark:bg-primary-subtle-dark text-primary">
+<span class="material-symbols-outlined text-3xl">groups</span>
+</div>
+<div>
+<p class="text-sm font-medium text-text-muted-light dark:text-text-muted-dark">攻略对象</p>
+<p class="text-3xl font-bold text-text-light dark:text-text-dark">12</p>
+</div>
+</div>
+<div class="flex items-start gap-4 rounded-xl border border-border-light dark:border-border-dark bg-surface-light dark:bg-surface-dark p-5 shadow-sm">
+<div class="flex size-12 items-center justify-center rounded-lg bg-primary-subtle-light dark:bg-primary-subtle-dark text-primary">
+<span class="material-symbols-outlined text-3xl">chat_bubble</span>
+</div>
+<div>
+<p class="text-sm font-medium text-text-muted-light dark:text-text-muted-dark">对话</p>
+<p class="text-3xl font-bold text-text-light dark:text-text-dark">89</p>
+</div>
+</div>
+<div class="flex items-start gap-4 rounded-xl border border-border-light dark:border-border-dark bg-surface-light dark:bg-surface-dark p-5 shadow-sm">
+<div class="flex size-12 items-center justify-center rounded-lg bg-primary-subtle-light dark:bg-primary-subtle-dark text-primary">
+<span class="material-symbols-outlined text-3xl">account_tree</span>
+</div>
+<div>
+<p class="text-sm font-medium text-text-muted-light dark:text-text-muted-dark">分支</p>
+<p class="text-3xl font-bold text-text-light dark:text-text-dark">256</p>
+</div>
+</div>
+<div class="flex items-start gap-4 rounded-xl border border-border-light dark:border-border-dark bg-surface-light dark:bg-surface-dark p-5 shadow-sm">
+<div class="flex size-12 items-center justify-center rounded-lg bg-primary-subtle-light dark:bg-primary-subtle-dark text-primary">
+<span class="material-symbols-outlined text-3xl">flag</span>
+</div>
+<div>
+<p class="text-sm font-medium text-text-muted-light dark:text-text-muted-dark">故事标记</p>
+<p class="text-3xl font-bold text-text-light dark:text-text-dark">42</p>
+</div>
+</div>
+</div>
+<div class="mb-6">
+<div class="flex items-center justify-between gap-4 mb-2">
+<h2 class="text-2xl font-bold text-text-light dark:text-text-dark">最近对话</h2>
+<div class="flex items-center gap-2">
+<button class="flex min-w-[84px] items-center justify-center gap-2 overflow-hidden rounded-full h-11 px-5 border border-primary text-primary text-sm font-bold leading-normal tracking-[0.015em] hover:bg-primary-subtle-light/50 dark:hover:bg-primary-subtle-dark/50 transition-colors">
+<span class="material-symbols-outlined text-base">support_agent</span>
+<span class="truncate">实时助手</span>
+</button>
+<button class="flex min-w-[84px] items-center justify-center gap-2 overflow-hidden rounded-full h-11 px-5 bg-primary text-white text-sm font-bold leading-normal tracking-[0.015em] hover:opacity-90 transition-opacity">
+<span class="material-symbols-outlined text-base">add</span>
+<span class="truncate">新对话</span>
+</button>
+</div>
+</div>
+<p class="text-text-muted-light dark:text-text-muted-dark text-sm mb-4">“我”与攻略对象的聊天记录摘要。</p>
+</div>
+<div class="grid grid-cols-1 gap-6 md:grid-cols-2 lg:grid-cols-3">
+<div class="flex flex-col rounded-xl border border-border-light dark:border-border-dark bg-surface-light dark:bg-surface-dark shadow-sm overflow-hidden group">
+<div class="p-6 flex-grow">
+<div class="flex items-start justify-between">
+<h3 class="text-lg font-bold text-text-light dark:text-text-dark mb-2">第1章：命运的相遇</h3>
+<div class="flex -space-x-2">
+<div class="bg-center bg-no-repeat aspect-square bg-cover rounded-full size-8 border-2 border-surface-light dark:border-surface-dark" data-alt="Character portrait of Yui" style='background-image: url("https://lh3.googleusercontent.com/aida-public/AB6AXuAp6MUuEagOyoN7YErXymDoE5lUa_6LxIqxUHyW-pm1_An1LnmskrWz2lu5avt_XszyPM8xeBsgtuykwlRMlcw242nOKRElWXpI7BsR0ZZxDtblxg15XCcJmye7JFZyARXxcg_RCyfRThdZq3O_qsPKmGxrtl9X4OEqTScF2opa08FtLH4wj6vwSXIVv_BADe0xGFmcvHa7ZK-D1xG04p6Wm2S4SUcNhgk2BnEsCXt3MSl1AU0FreVnt_Pz35BhNb9M2sTDQGHCE8s");'></div>
+<div class="bg-center bg-no-repeat aspect-square bg-cover rounded-full size-8 border-2 border-surface-light dark:border-surface-dark" data-alt="Character portrait of Kenji" style='background-image: url("https://lh3.googleusercontent.com/aida-public/AB6AXuAKbk_1pii-Sh8bCFKxAYxV5OB9etJIF66XA6P19_mT3Y-yPC7k4Fw1C1T2EiSJnTS0DWmTU16sLiZQjfgYOyEHC3SlOVwBdl0jq32oaYdYNJnYTS0SyxR5D3kX4CioX8qFU69tkhudyYYMtHX7zsc9sYlsdq1bSLRVAHuo01p1hE4jtauwnyRz6p36yeQfaBKL5lVc9bTr_KleRg0IKaEU_svZ40OTubRHnAVHjIT-k0ZYL9W3lIt6Oi-YMFwlcvsOk8yH_W1X7PY");'></div>
+</div>
+</div>
+<p class="text-text-muted-light dark:text-text-muted-dark text-sm line-clamp-2">优衣在樱花节上初次遇见健司的开场场景。确立了他们最初的动态关系。</p>
+</div>
+<div class="px-6 py-4 border-t border-border-light dark:border-border-dark bg-primary-subtle-light/50 dark:bg-primary-subtle-dark/50 flex justify-between items-center">
+<p class="text-xs text-text-muted-light dark:text-text-muted-dark">最后编辑：2天前</p>
+<button class="opacity-0 group-hover:opacity-100 transition-opacity p-2 rounded-full hover:bg-primary-subtle-light dark:hover:bg-primary-subtle-dark text-text-muted-light dark:text-text-muted-dark hover:text-primary dark:hover:text-white">
+<span class="material-symbols-outlined text-base">edit</span>
+</button>
+</div>
+</div>
+<div class="flex flex-col rounded-xl border border-border-light dark:border-border-dark bg-surface-light dark:bg-surface-dark shadow-sm overflow-hidden group">
+<div class="p-6 flex-grow">
+<div class="flex items-start justify-between">
+<h3 class="text-lg font-bold text-text-light dark:text-text-dark mb-2">咖啡馆的误会</h3>
+<div class="flex -space-x-2">
+<div class="bg-center bg-no-repeat aspect-square bg-cover rounded-full size-8 border-2 border-surface-light dark:border-surface-dark" data-alt="Character portrait of Kenji" style='background-image: url("https://lh3.googleusercontent.com/aida-public/AB6AXuBQ4xApll3hfccVMogwcV0VAtDD-9bqRyenzu8-XjXNX1O5y5btB5jcpjf5eioAz3xyMBYk958rp3lwGODe0PmRViPHmzFRXdXMnylK7R-QYiC4qNvH7Wzf0sb9KYG6gsSBVrNs0957cDPMJjASZgB1i9GRkiALux6DioNbmM3Ag5gT1cAOXv5OpPkWQcQJQWzZmEk40VwPpH1l-BqqAVGHB-_jxNLYH33vi0_ZisgSQOgHrmx9sS28-f-5Qx4_3skDP6CxFlSK4EQ");'></div>
+<div class="bg-center bg-no-repeat aspect-square bg-cover rounded-full size-8 border-2 border-surface-light dark:border-surface-dark" data-alt="Character portrait of Akira" style='background-image: url("https://lh3.googleusercontent.com/aida-public/AB6AXuClGlcDvk1f0qLK2HpJxcXjaCrsYQ7u-L_k0f-Zoyu1pGnllysPYDYuWLvkn0chl_B5La_Fo8PLS8H9Zi8S-yHEUxgbIwJSDT8gfPGO--BCp8bSW4K-FM8ZjEVMyRDRgeBo1OkW0Ll4HVYncy2pNwK_iZT72CJM5IPUHCKZP49BDC6qv4tc_6sMIh6-E7IVXAM7ZTDa1zdJFL80pCwafsSTyK-eIrfsfRIitnkWABSKHjj0fxmlZ12JAuTzgK694g1U8FZ2co2egB8");'></div>
+</div>
+</div>
+<p class="text-text-muted-light dark:text-text-muted-dark text-sm line-clamp-2">一个关键的冲突场景。健司看到优衣和她的童年朋友明说话，导致了一个主要的情节点。</p>
+</div>
+<div class="px-6 py-4 border-t border-border-light dark:border-border-dark bg-primary-subtle-light/50 dark:bg-primary-subtle-dark/50 flex justify-between items-center">
+<p class="text-xs text-text-muted-light dark:text-text-muted-dark">最后编辑：5天前</p>
+<button class="opacity-0 group-hover:opacity-100 transition-opacity p-2 rounded-full hover:bg-primary-subtle-light dark:hover:bg-primary-subtle-dark text-text-muted-light dark:text-text-muted-dark hover:text-primary dark:hover:text-white">
+<span class="material-symbols-outlined text-base">edit</span>
+</button>
+</div>
+</div>
+<div class="flex flex-col rounded-xl border border-border-light dark:border-border-dark bg-surface-light dark:bg-surface-dark shadow-sm overflow-hidden group">
+<div class="p-6 flex-grow">
+<div class="flex items-start justify-between">
+<h3 class="text-lg font-bold text-text-light dark:text-text-dark mb-2">图书馆的告白</h3>
+<div class="flex -space-x-2">
+<div class="bg-center bg-no-repeat aspect-square bg-cover rounded-full size-8 border-2 border-surface-light dark:border-surface-dark" data-alt="Character portrait of Yui" style='background-image: url("https://lh3.googleusercontent.com/aida-public/AB6AXuCY9iTH2gIaSy96B2Y0uSYRrIMBNQP5H2w42FVLmlcibODtODIkp6Dov5qG0qko2Hpi1R71UO0xs7MaMsAQLtbGTKX5MiYu49akNkogzkdcE7D30Vqr_geWa5deuAVBXCoR2uQJpmEmbD2hZAwcDOtqIyFesytEtTA3NZkQJkIBvpUn4ELBXG0Z_Ch7_AcafFyr_7aYTkT2jobJDTdLsSDwyyOXKiPFDNRrYIjUl8n0kRfcWIVPh1sUt5fXUFkgfGNG4XzKz6gKDGI");'></div>
+</div>
+</div>
+<p class="text-text-muted-light dark:text-text-muted-dark text-sm line-clamp-2">一个感人的独白，优衣在学校图书馆学习到很晚时向玩家表白了她的感情。</p>
+</div>
+<div class="px-6 py-4 border-t border-border-light dark:border-border-dark bg-primary-subtle-light/50 dark:bg-primary-subtle-dark/50 flex justify-between items-center">
+<p class="text-xs text-text-muted-light dark:text-text-muted-dark">最后编辑：1周前</p>
+<button class="opacity-0 group-hover:opacity-100 transition-opacity p-2 rounded-full hover:bg-primary-subtle-light dark:hover:bg-primary-subtle-dark text-text-muted-light dark:text-text-muted-dark hover:text-primary dark:hover:text-white">
+<span class="material-symbols-outlined text-base">edit</span>
+</button>
+</div>
+</div>
+<div class="group flex min-h-48 flex-col items-center justify-center gap-2 rounded-xl border-2 border-dashed border-border-light dark:border-border-dark p-6 text-center transition-colors hover:border-primary/50 hover:bg-primary-subtle-light/50 dark:hover:border-primary/50 dark:hover:bg-primary-subtle-dark/50">
+<span class="material-symbols-outlined text-4xl text-text-muted-light dark:text-text-muted-dark group-hover:text-primary transition-colors">add_circle</span>
+<h3 class="font-bold text-text-light dark:text-text-dark">创建新对话</h3>
+<p class="text-sm text-text-muted-light dark:text-text-muted-dark">从头开始一段新对话。</p>
+</div>
+</div>
+</div>
+</main>
+</div>
+</body></html>

@@ -77,6 +77,51 @@ function setupIPC() {
     }
   });
 
+  // HUD拖拽相关变量
+  let dragStartPos = { x: 0, y: 0 };
+  let dragWindowBounds = { x: 0, y: 0, width: 0, height: 0 };
+  let isHUDDragging = false;
+
+  // 开始拖拽HUD
+  ipcMain.on('start-hud-drag', (event, pos) => {
+    if (!hudWindow) return;
+    isHUDDragging = true;
+    dragStartPos = pos;
+    // 获取窗口的完整边界信息（位置和大小）
+    const bounds = hudWindow.getBounds();
+    dragWindowBounds = {
+      x: bounds.x,
+      y: bounds.y,
+      width: bounds.width,
+      height: bounds.height
+    };
+    console.log('HUD拖拽开始，窗口边界:', dragWindowBounds);
+  });
+
+  // 更新HUD拖拽位置
+  // 重要：使用setBounds同时设置位置和大小，避免高DPI缩放时窗口无限放大
+  // 参考：https://zhuanlan.zhihu.com/p/112564936
+  ipcMain.on('update-hud-drag', (event, pos) => {
+    if (!hudWindow || !isHUDDragging) return;
+    const deltaX = pos.x - dragStartPos.x;
+    const deltaY = pos.y - dragStartPos.y;
+    const newX = dragWindowBounds.x + deltaX;
+    const newY = dragWindowBounds.y + deltaY;
+    // 必须使用setBounds同时设置位置和大小，不能只用setPosition
+    hudWindow.setBounds({
+      x: newX,
+      y: newY,
+      width: dragWindowBounds.width,
+      height: dragWindowBounds.height
+    });
+  });
+
+  // 结束HUD拖拽
+  ipcMain.on('end-hud-drag', () => {
+    isHUDDragging = false;
+    console.log('HUD拖拽结束');
+  });
+
   console.log('IPC通信已设置');
 }
 
@@ -87,18 +132,22 @@ function createHUDWindow() {
     const primaryDisplay = screen.getPrimaryDisplay();
     const { width, height } = primaryDisplay.workAreaSize;
 
-    console.log(`Creating HUD window at position: ${width - 420}, ${height - 320}`);
+    console.log(`Creating HUD window at position: ${width - 540}, ${height - 620}`);
 
     hudWindow = new BrowserWindow({
-      width: 400,
-      height: 300,
-      x: width - 420,
-      y: height - 320,
+      width: 520,
+      height: 600,
+      minWidth: 400,
+      minHeight: 300,
+      maxWidth: 1200,
+      maxHeight: 1000,
+      x: width - 540,
+      y: height - 620,
       frame: false,
       transparent: true,
       alwaysOnTop: true,
       skipTaskbar: true,
-      resizable: false,
+      resizable: true,  // 允许调整大小
       show: false, // 先不显示，等ready后再显示
       webPreferences: {
         nodeIntegration: false,
@@ -109,12 +158,17 @@ function createHUDWindow() {
       title: 'LiveGalGame HUD'
     });
 
+    // 确保窗口可以调整大小（显式设置）
+    hudWindow.setResizable(true);
+
     // 加载HUD页面
     hudWindow.loadFile(path.join(__dirname, 'renderer/hud.html'));
 
     // 页面加载完成后再显示
     hudWindow.once('ready-to-show', () => {
       console.log('HUD window ready to show');
+      // 再次确认窗口可以调整大小
+      hudWindow.setResizable(true);
       hudWindow.show();
     });
 

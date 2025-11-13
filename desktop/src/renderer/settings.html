@@ -1,0 +1,546 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>设置 - LiveGalGame</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <style>
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Inter', 'Noto Sans SC', sans-serif;
+      background: linear-gradient(135deg, #fdf8fa 0%, #f9f0f4 100%);
+      margin: 0;
+      padding: 0;
+      min-height: 100vh;
+    }
+
+    .dark body {
+      background: linear-gradient(135deg, #1a0a12 0%, #0d0510 100%);
+    }
+
+    .container {
+      max-width: 800px;
+      margin: 0 auto;
+      padding: 40px 20px;
+    }
+
+    .card {
+      background: rgba(255, 255, 255, 0.8);
+      backdrop-filter: blur(10px);
+      border-radius: 16px;
+      border: 1px solid rgba(255, 255, 255, 0.3);
+      box-shadow: 0 8px 32px rgba(0, 0, 0, 0.1);
+      padding: 24px;
+      margin-bottom: 24px;
+      transition: all 0.3s ease;
+    }
+
+    .card:hover {
+      box-shadow: 0 12px 40px rgba(0, 0, 0, 0.15);
+    }
+
+    .dark .card {
+      background: rgba(15, 23, 42, 0.6);
+      border-color: rgba(255, 255, 255, 0.1);
+    }
+
+    .section-title {
+      font-size: 20px;
+      font-weight: 600;
+      color: #c51662;
+      margin-bottom: 16px;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .permission-status {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 16px;
+      background: rgba(255, 255, 255, 0.5);
+      border-radius: 12px;
+      margin-bottom: 16px;
+    }
+
+    .dark .permission-status {
+      background: rgba(30, 41, 59, 0.4);
+    }
+
+    .status-indicator {
+      width: 12px;
+      height: 12px;
+      border-radius: 50%;
+      margin-right: 8px;
+    }
+
+    .status-granted {
+      background: #22c55e;
+    }
+
+    .status-denied {
+      background: #ef4444;
+    }
+
+    .status-pending {
+      background: #f59e0b;
+    }
+
+    .btn {
+      padding: 10px 20px;
+      border-radius: 8px;
+      font-weight: 500;
+      cursor: pointer;
+      transition: all 0.2s ease;
+      border: none;
+      font-size: 14px;
+    }
+
+    .btn-primary {
+      background: linear-gradient(135deg, #c51662, #8e24aa);
+      color: white;
+    }
+
+    .btn-primary:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 4px 12px rgba(197, 22, 98, 0.3);
+    }
+
+    .btn-secondary {
+      background: rgba(197, 22, 98, 0.1);
+      color: #c51662;
+    }
+
+    .btn-secondary:hover {
+      background: rgba(197, 22, 98, 0.2);
+    }
+
+    .btn:disabled {
+      opacity: 0.6;
+      cursor: not-allowed;
+      transform: none !important;
+    }
+
+    .test-section {
+      margin-top: 24px;
+      padding-top: 24px;
+      border-top: 1px solid rgba(0, 0, 0, 0.05);
+    }
+
+    .dark .test-section {
+      border-top-color: rgba(255, 255, 255, 0.05);
+    }
+
+    .waveform-container {
+      height: 60px;
+      background: rgba(255, 255, 255, 0.5);
+      border-radius: 8px;
+      margin: 16px 0;
+      position: relative;
+      overflow: hidden;
+    }
+
+    .dark .waveform-container {
+      background: rgba(30, 41, 59, 0.4);
+    }
+
+    .waveform-bar {
+      position: absolute;
+      bottom: 0;
+      width: 4px;
+      background: linear-gradient(to top, #c51662, #8e24aa);
+      border-radius: 2px;
+      transition: height 0.1s ease;
+    }
+
+    .back-link {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      color: #c51662;
+      text-decoration: none;
+      font-weight: 500;
+      margin-bottom: 24px;
+      transition: all 0.2s ease;
+    }
+
+    .back-link:hover {
+      gap: 12px;
+    }
+
+    .error-message {
+      background: rgba(239, 68, 68, 0.1);
+      border: 1px solid rgba(239, 68, 68, 0.2);
+      color: #ef4444;
+      padding: 12px;
+      border-radius: 8px;
+      margin-top: 12px;
+      font-size: 14px;
+    }
+
+    .success-message {
+      background: rgba(34, 197, 94, 0.1);
+      border: 1px solid rgba(34, 197, 94, 0.2);
+      color: #22c55e;
+      padding: 12px;
+      border-radius: 8px;
+      margin-top: 12px;
+      font-size: 14px;
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <a href="index.html" class="back-link">
+      ← 返回
+    </a>
+
+    <h1 style="font-size: 28px; color: #c51662; margin-bottom: 32px; font-weight: 700;">设置</h1>
+
+    <!-- 音频权限设置 -->
+    <div class="card">
+      <div class="section-title">
+        🎤 音频权限
+      </div>
+
+      <div class="permission-status">
+        <div style="display: flex; align-items: center;">
+          <span class="status-indicator status-pending" id="mic-status-icon"></span>
+          <div>
+            <div style="font-weight: 500;" id="mic-status-text">检测中...</div>
+            <div style="font-size: 12px; color: #666; margin-top: 4px;" id="mic-status-detail">正在检查麦克风权限</div>
+          </div>
+        </div>
+        <button class="btn btn-primary" id="request-mic-btn">请求权限</button>
+      </div>
+
+      <div class="test-section">
+        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px;">
+          <div class="section-title" style="font-size: 16px; margin-bottom: 0;">
+            🎵 音频测试
+          </div>
+          <div style="display: flex; gap: 8px;">
+            <button class="btn btn-secondary" id="test-mic-btn" disabled>开始测试</button>
+            <button class="btn btn-secondary" id="stop-test-btn" disabled>停止</button>
+          </div>
+        </div>
+
+        <div class="waveform-container" id="waveform-container" style="display: none;">
+          <!-- 波形条将通过JavaScript动态生成 -->
+        </div>
+
+        <div style="font-size: 12px; color: #666;" id="volume-indicator">
+          音量：<span id="volume-value">0</span>%
+        </div>
+
+        <div id="test-message"></div>
+      </div>
+    </div>
+
+    <!-- API设置 -->
+    <div class="card">
+      <div class="section-title">
+        🔑 API配置
+      </div>
+
+      <div style="margin-bottom: 16px;">
+        <label style="display: block; font-weight: 500; margin-bottom: 8px; color: #333;">API Key</label>
+        <input type="password" style="width: 100%; padding: 12px; border: 1px solid #ddd; border-radius: 8px; font-size: 14px;" placeholder="输入你的API密钥">
+      </div>
+
+      <div style="margin-bottom: 16px;">
+        <label style="display: block; font-weight: 500; margin-bottom: 8px; color: #333;">API Endpoint</label>
+        <input type="text" style="width: 100%; padding: 12px; border: 1px solid #ddd; border-radius: 8px; font-size: 14px;" placeholder="https://api.example.com/v1">
+      </div>
+
+      <div style="display: flex; gap: 12px;">
+        <button class="btn btn-primary">保存配置</button>
+        <button class="btn btn-secondary">测试连接</button>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    // 音频相关变量
+    let audioContext = null;
+    let mediaStream = null;
+    let analyser = null;
+    let dataArray = null;
+    let animationId = null;
+    let isTesting = false;
+
+    // DOM元素
+    const micStatusIcon = document.getElementById('mic-status-icon');
+    const micStatusText = document.getElementById('mic-status-text');
+    const micStatusDetail = document.getElementById('mic-status-detail');
+    const requestMicBtn = document.getElementById('request-mic-btn');
+    const testMicBtn = document.getElementById('test-mic-btn');
+    const stopTestBtn = document.getElementById('stop-test-btn');
+    const waveformContainer = document.getElementById('waveform-container');
+    const volumeValue = document.getElementById('volume-value');
+    const testMessage = document.getElementById('test-message');
+
+    // 初始化
+    document.addEventListener('DOMContentLoaded', () => {
+      checkMicrophonePermission();
+    });
+
+    // 检查麦克风权限
+    async function checkMicrophonePermission() {
+      try {
+        if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
+          updatePermissionStatus('unsupported', '浏览器不支持音频设备');
+          return;
+        }
+
+        // 尝试获取权限状态（需要https或localhost）
+        if (navigator.permissions && navigator.permissions.query) {
+          try {
+            const permission = await navigator.permissions.query({ name: 'microphone' });
+            console.log('Permission state:', permission.state);
+
+            if (permission.state === 'granted') {
+              updatePermissionStatus('granted', '已授权');
+            } else if (permission.state === 'denied') {
+              updatePermissionStatus('denied', '被拒绝');
+            } else {
+              updatePermissionStatus('prompt', '需要授权');
+            }
+          } catch (e) {
+            // 某些浏览器不支持permission.query，回退到直接测试
+            console.log('Permission API not available, testing directly');
+            updatePermissionStatus('prompt', '需要授权');
+          }
+        } else {
+          // 回退方案
+          updatePermissionStatus('prompt', '需要授权');
+        }
+      } catch (error) {
+        console.error('Error checking permission:', error);
+        updatePermissionStatus('error', '检查失败');
+      }
+    }
+
+    // 更新权限状态显示
+    function updatePermissionStatus(status, text) {
+      micStatusIcon.className = 'status-indicator';
+
+      switch (status) {
+        case 'granted':
+          micStatusIcon.classList.add('status-granted');
+          micStatusText.textContent = '麦克风权限：' + text;
+          micStatusDetail.textContent = '可以进行音频测试';
+          requestMicBtn.disabled = true;
+          requestMicBtn.textContent = '已授权';
+          testMicBtn.disabled = false;
+          break;
+        case 'denied':
+          micStatusIcon.classList.add('status-denied');
+          micStatusText.textContent = '麦克风权限：' + text;
+          micStatusDetail.textContent = '请在系统设置中手动授权';
+          requestMicBtn.disabled = false;
+          requestMicBtn.textContent = '重新请求';
+          testMicBtn.disabled = true;
+          break;
+        case 'prompt':
+          micStatusIcon.classList.add('status-pending');
+          micStatusText.textContent = '麦克风权限：' + text;
+          micStatusDetail.textContent = '点击按钮请求麦克风权限';
+          requestMicBtn.disabled = false;
+          requestMicBtn.textContent = '请求权限';
+          testMicBtn.disabled = true;
+          break;
+        case 'error':
+        default:
+          micStatusIcon.classList.add('status-denied');
+          micStatusText.textContent = '麦克风权限：检查失败';
+          micStatusDetail.textContent = '请刷新页面重试';
+          requestMicBtn.disabled = false;
+          break;
+      }
+    }
+
+    // 请求麦克风权限
+    requestMicBtn.addEventListener('click', async () => {
+      try {
+        testMessage.innerHTML = '';
+        requestMicBtn.disabled = true;
+        requestMicBtn.textContent = '请求中...';
+
+        const stream = await navigator.mediaDevices.getUserMedia({
+          audio: true
+        });
+
+        // 立即关闭流（只是测试权限）
+        stream.getTracks().forEach(track => track.stop());
+
+        updatePermissionStatus('granted', '已授权');
+        showMessage('success', '麦克风权限已获取！');
+      } catch (error) {
+        console.error('Error requesting microphone:', error);
+
+        if (error.name === 'NotAllowedError' || error.name === 'PermissionDeniedError') {
+          updatePermissionStatus('denied', '被拒绝');
+          showMessage('error', '麦克风权限被拒绝。请在浏览器设置中手动授权。');
+        } else if (error.name === 'NotFoundError' || error.name === 'DevicesNotFoundError') {
+          updatePermissionStatus('error', '未找到麦克风设备');
+          showMessage('error', '未找到麦克风设备，请检查设备连接。');
+        } else {
+          updatePermissionStatus('error', '请求失败');
+          showMessage('error', '请求失败：' + error.message);
+        }
+      }
+    });
+
+    // 开始音频测试
+    testMicBtn.addEventListener('click', async () => {
+      try {
+        testMessage.innerHTML = '';
+        testMicBtn.disabled = true;
+        stopTestBtn.disabled = false;
+
+        // 创建音频上下文
+        audioContext = new (window.AudioContext || window.webkitAudioContext)();
+
+        // 获取麦克风输入
+        mediaStream = await navigator.mediaDevices.getUserMedia({ audio: true });
+
+        // 创建分析器
+        analyser = audioContext.createAnalyser();
+        analyser.fftSize = 256;
+        analyser.smoothingTimeConstant = 0.8;
+
+        // 连接音频源到分析器
+        const source = audioContext.createMediaStreamSource(mediaStream);
+        source.connect(analyser);
+
+        // 创建数据数组
+        dataArray = new Uint8Array(analyser.frequencyBinCount);
+
+        // 显示波形容器
+        waveformContainer.style.display = 'block';
+
+        // 生成波形条
+        generateWaveformBars();
+
+        // 开始可视化
+        isTesting = true;
+        visualize();
+
+        showMessage('success', '音频测试已开始，对着麦克风说话看看波形变化！');
+      } catch (error) {
+        console.error('Error starting audio test:', error);
+        testMicBtn.disabled = false;
+        stopTestBtn.disabled = true;
+        showMessage('error', '音频测试失败：' + error.message);
+      }
+    });
+
+    // 停止音频测试
+    stopTestBtn.addEventListener('click', () => {
+      stopAudioTest();
+      showMessage('success', '音频测试已停止');
+    });
+
+    // 生成波形条
+    function generateWaveformBars() {
+      waveformContainer.innerHTML = '';
+      const barCount = 40;
+      const barWidth = 4;
+      const barGap = 2;
+      const containerWidth = barCount * (barWidth + barGap) - barGap;
+
+      waveformContainer.style.width = containerWidth + 'px';
+
+      for (let i = 0; i < barCount; i++) {
+        const bar = document.createElement('div');
+        bar.className = 'waveform-bar';
+        bar.style.left = i * (barWidth + barGap) + 'px';
+        bar.style.width = barWidth + 'px';
+        bar.style.height = '2px';
+        waveformContainer.appendChild(bar);
+      }
+    }
+
+    // 可视化音频
+    function visualize() {
+      if (!isTesting || !analyser) return;
+
+      analyser.getByteFrequencyData(dataArray);
+
+      const bars = waveformContainer.querySelectorAll('.waveform-bar');
+      let sum = 0;
+
+      for (let i = 0; i < bars.length; i++) {
+        const index = Math.floor((i / bars.length) * dataArray.length);
+        const value = dataArray[index];
+        const percent = value / 255;
+        const height = Math.max(2, percent * 60);
+
+        bars[i].style.height = height + 'px';
+        sum += value;
+      }
+
+      // 计算平均音量
+      const average = sum / dataArray.length;
+      const volume = Math.round((average / 255) * 100);
+      volumeValue.textContent = volume;
+
+      animationId = requestAnimationFrame(visualize);
+    }
+
+    // 停止音频测试
+    function stopAudioTest() {
+      isTesting = false;
+
+      if (animationId) {
+        cancelAnimationFrame(animationId);
+        animationId = null;
+      }
+
+      if (mediaStream) {
+        mediaStream.getTracks().forEach(track => track.stop());
+        mediaStream = null;
+      }
+
+      if (audioContext) {
+        audioContext.close();
+        audioContext = null;
+      }
+
+      analyser = null;
+      dataArray = null;
+
+      // 隐藏波形
+      waveformContainer.style.display = 'none';
+
+      // 重置按钮状态
+      testMicBtn.disabled = false;
+      stopTestBtn.disabled = true;
+
+      // 重置音量显示
+      volumeValue.textContent = '0';
+    }
+
+    // 显示消息
+    function showMessage(type, message) {
+      const messageDiv = document.createElement('div');
+      messageDiv.className = type === 'error' ? 'error-message' : 'success-message';
+      messageDiv.textContent = message;
+      testMessage.appendChild(messageDiv);
+
+      setTimeout(() => {
+        messageDiv.remove();
+      }, 5000);
+    }
+
+    // 页面卸载时停止音频测试
+    window.addEventListener('beforeunload', () => {
+      stopAudioTest();
+    });
+
+    console.log('Settings page loaded');
+  </script>
+</body>
+</html>

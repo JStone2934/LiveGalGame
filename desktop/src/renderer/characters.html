@@ -1,0 +1,290 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>LiveGalGame - 攻略对象</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script>
+    tailwind.config = {
+      darkMode: "class",
+      theme: {
+        extend: {
+          colors: {
+            "primary": "#c51662",
+            "background-light": "#f8f6f7",
+            "background-dark": "#211118",
+            "text-light": "#1b0e14",
+            "text-dark": "#f8f6f7",
+            "text-muted-light": "#974e6e",
+            "text-muted-dark": "#a88e99",
+            "surface-light": "#f3e7ec",
+            "surface-dark": "#3a242d"
+          },
+          fontFamily: {
+            "display": ["Inter", "Noto Sans SC", "sans-serif"]
+          }
+        }
+      }
+    }
+  </script>
+  <style>
+    body {
+      font-family: 'Inter', 'Noto Sans SC', sans-serif;
+    }
+  </style>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Noto+Sans+SC:wght@300;400;500;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@20..48,100..700,0..1,-50..200" />
+</head>
+<body class="bg-background-light dark:bg-background-dark text-text-light dark:text-text-dark min-h-screen">
+  <div class="flex h-screen">
+    <!-- 左侧导航栏 -->
+    <aside class="flex h-screen w-64 flex-col justify-between bg-gradient-to-b from-[#d81b60] to-[#8e24aa] p-4 text-white sticky top-0">
+      <div class="flex flex-col gap-6">
+        <!-- Logo -->
+        <div class="flex items-center gap-3 px-2">
+          <div class="bg-center bg-no-repeat aspect-square bg-cover rounded-full size-10"
+               style="background-color: #ffffff; background-image: url('data:image/svg+xml,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="%23c51662"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-2 15l-5-5 1.41-1.41L10 14.17l7.59-7.59L19 8l-9 9z"/></svg>');"></div>
+          <div class="flex flex-col">
+            <h1 class="text-white text-base font-bold leading-normal">LiveGalGame</h1>
+            <p class="text-white/80 text-sm font-normal leading-normal">对话管理器</p>
+          </div>
+        </div>
+
+        <!-- 导航菜单 -->
+        <nav class="flex flex-col gap-2">
+          <a class="nav-item flex items-center gap-3 px-3 py-2 rounded text-white/80 hover:bg-white/10 transition-colors" href="./index.html" data-page="overview">
+            <span class="material-symbols-outlined">dashboard</span>
+            <p class="text-sm font-medium leading-normal">总览</p>
+          </a>
+          <a class="nav-item flex items-center gap-3 px-3 py-2 rounded bg-white/20 text-white" href="./characters.html" data-page="characters">
+            <span class="material-symbols-outlined" style="font-variation-settings: 'FILL' 1;">groups</span>
+            <p class="text-sm font-medium leading-normal">攻略对象</p>
+          </a>
+          <a class="nav-item flex items-center gap-3 px-3 py-2 rounded text-white/80 hover:bg-white/10 transition-colors" href="./conversation-editor.html" data-page="conversations">
+            <span class="material-symbols-outlined">history</span>
+            <p class="text-sm font-medium leading-normal">历史对话</p>
+          </a>
+          <a class="nav-item flex items-center gap-3 px-3 py-2 rounded text-white/80 hover:bg-white/10 transition-colors" href="./settings.html" data-page="settings">
+            <span class="material-symbols-outlined">settings</span>
+            <p class="text-sm font-medium leading-normal">设置</p>
+          </a>
+        </nav>
+      </div>
+    </aside>
+
+    <!-- 主内容区域 -->
+    <main class="flex-1 overflow-y-auto">
+      <div class="p-8">
+        <!-- 页面标题 -->
+        <div class="mb-8">
+          <div class="flex items-center gap-3 mb-2">
+            <h1 class="text-3xl font-bold bg-gradient-to-r from-primary to-[#8e24aa] bg-clip-text text-transparent">攻略对象</h1>
+          </div>
+          <p class="text-text-muted-light dark:text-text-muted-dark">管理与各个角色的关系和档案</p>
+        </div>
+
+        <!-- 统计卡片 -->
+        <div class="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
+          <div class="bg-white dark:bg-surface-dark rounded-xl p-6 border border-surface-light dark:border-surface-dark">
+            <div class="flex items-center justify-between mb-2">
+              <span class="text-text-muted-light dark:text-text-muted-dark text-sm">总计攻略对象</span>
+              <span class="material-symbols-outlined text-primary">groups</span>
+            </div>
+            <div class="text-2xl font-bold">3</div>
+          </div>
+
+          <div class="bg-white dark:bg-surface-dark rounded-xl p-6 border border-surface-light dark:border-surface-dark">
+            <div class="flex items-center justify-between mb-2">
+              <span class="text-text-muted-light dark:text-text-muted-dark text-sm">活跃对话</span>
+              <span class="material-symbols-outlined text-green-500">chat</span>
+            </div>
+            <div class="text-2xl font-bold">5</div>
+          </div>
+
+          <div class="bg-white dark:bg-surface-dark rounded-xl p-6 border border-surface-light dark:border-surface-dark">
+            <div class="flex items-center justify-between mb-2">
+              <span class="text-text-muted-light dark:text-text-muted-dark text-sm">平均好感度</span>
+              <span class="material-symbols-outlined text-yellow-500">favorite</span>
+            </div>
+            <div class="text-2xl font-bold">68</div>
+          </div>
+        </div>
+
+        <!-- 攻略对象列表 -->
+        <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+          <!-- Miyu -->
+          <div class="bg-white dark:bg-surface-dark rounded-xl p-6 border border-surface-light dark:border-surface-dark hover:shadow-lg transition-shadow">
+            <div class="flex items-center gap-4 mb-4">
+              <div class="w-16 h-16 rounded-full bg-gradient-to-br from-[#ff6b6b] to-[#ff8e8e] flex items-center justify-center text-white text-xl font-bold">M</div>
+              <div>
+                <h3 class="text-lg font-bold">Miyu</h3>
+                <p class="text-sm text-text-muted-light dark:text-text-muted-dark">青梅竹马</p>
+              </div>
+            </div>
+
+            <div class="mb-4">
+              <div class="flex justify-between text-sm mb-1">
+                <span>好感度</span>
+                <span>75%</span>
+              </div>
+              <div class="w-full bg-gray-200 dark:bg-gray-700 rounded-full h-2">
+                <div class="bg-primary h-2 rounded-full" style="width: 75%"></div>
+              </div>
+            </div>
+
+            <div class="space-y-2 mb-4">
+              <div class="flex justify-between text-sm">
+                <span class="text-text-muted-light dark:text-text-muted-dark">最近对话</span>
+                <span>2小时前</span>
+              </div>
+              <div class="flex justify-between text-sm">
+                <span class="text-text-muted-light dark:text-text-muted-dark">对话次数</span>
+                <span>12</span>
+              </div>
+            </div>
+
+            <div class="mb-4">
+              <p class="text-sm text-text-muted-light dark:text-text-muted-dark mb-2">关键词</p>
+              <div class="flex flex-wrap gap-2">
+                <span class="px-2 py-1 bg-primary/10 text-primary text-xs rounded">活泼</span>
+                <span class="px-2 py-1 bg-primary/10 text-primary text-xs rounded">可爱</span>
+                <span class="px-2 py-1 bg-primary/10 text-primary text-xs rounded">关心</span>
+              </div>
+            </div>
+
+            <div class="flex gap-2">
+              <button class="flex-1 bg-primary text-white py-2 px-4 rounded-lg text-sm font-medium hover:bg-primary/90 transition-colors" onclick="viewCharacterHistory('miyu')">
+                查看历史
+              </button>
+              <button class="px-4 py-2 border border-surface-light dark:border-surface-dark rounded-lg text-sm hover:bg-surface-light dark:hover:bg-surface-dark transition-colors" onclick="viewCharacterDetail('miyu')">
+                详情
+              </button>
+            </div>
+          </div>
+
+          <!-- Akira -->
+          <div class="bg-white dark:bg-surface-dark rounded-xl p-6 border border-surface-light dark:border-surface-dark hover:shadow-lg transition-shadow">
+            <div class="flex items-center gap-4 mb-4">
+              <div class="w-16 h-16 rounded-full bg-gradient-to-br from-[#4ecdc4] to-[#6ee5dd] flex items-center justify-center text-white text-xl font-bold">A</div>
+              <div>
+                <h3 class="text-lg font-bold">Akira</h3>
+                <p class="text-sm text-text-muted-light dark:text-text-muted-dark">学生会长</p>
+              </div>
+            </div>
+
+            <div class="mb-4">
+              <div class="flex justify-between text-sm mb-1">
+                <span>好感度</span>
+                <span>60%</span>
+              </div>
+              <div class="w-full bg-gray-200 dark:bg-gray-700 rounded-full h-2">
+                <div class="bg-primary h-2 rounded-full" style="width: 60%"></div>
+              </div>
+            </div>
+
+            <div class="space-y-2 mb-4">
+              <div class="flex justify-between text-sm">
+                <span class="text-text-muted-light dark:text-text-muted-dark">最近对话</span>
+                <span>1天前</span>
+              </div>
+              <div class="flex justify-between text-sm">
+                <span class="text-text-muted-light dark:text-text-muted-dark">对话次数</span>
+                <span>8</span>
+              </div>
+            </div>
+
+            <div class="mb-4">
+              <p class="text-sm text-text-muted-light dark:text-text-muted-dark mb-2">关键词</p>
+              <div class="flex flex-wrap gap-2">
+                <span class="px-2 py-1 bg-primary/10 text-primary text-xs rounded">认真</span>
+                <span class="px-2 py-1 bg-primary/10 text-primary text-xs rounded">负责</span>
+                <span class="px-2 py-1 bg-primary/10 text-primary text-xs rounded">温柔</span>
+              </div>
+            </div>
+
+            <div class="flex gap-2">
+              <button class="flex-1 bg-primary text-white py-2 px-4 rounded-lg text-sm font-medium hover:bg-primary/90 transition-colors" onclick="viewCharacterHistory('akira')">
+                查看历史
+              </button>
+              <button class="px-4 py-2 border border-surface-light dark:border-surface-dark rounded-lg text-sm hover:bg-surface-light dark:hover:bg-surface-dark transition-colors" onclick="viewCharacterDetail('akira')">
+                详情
+              </button>
+            </div>
+          </div>
+
+          <!-- Hana -->
+          <div class="bg-white dark:bg-surface-dark rounded-xl p-6 border border-surface-light dark:border-surface-dark hover:shadow-lg transition-shadow">
+            <div class="flex items-center gap-4 mb-4">
+              <div class="w-16 h-16 rounded-full bg-gradient-to-br from-[#ffe66d] to-[#fff099] flex items-center justify-center text-gray-800 text-xl font-bold">H</div>
+              <div>
+                <h3 class="text-lg font-bold">Hana</h3>
+                <p class="text-sm text-text-muted-light dark:text-text-muted-dark">图书馆管理员</p>
+              </div>
+            </div>
+
+            <div class="mb-4">
+              <div class="flex justify-between text-sm mb-1">
+                <span>好感度</span>
+                <span>45%</span>
+              </div>
+              <div class="w-full bg-gray-200 dark:bg-gray-700 rounded-full h-2">
+                <div class="bg-primary h-2 rounded-full" style="width: 45%"></div>
+              </div>
+            </div>
+
+            <div class="space-y-2 mb-4">
+              <div class="flex justify-between text-sm">
+                <span class="text-text-muted-light dark:text-text-muted-dark">最近对话</span>
+                <span>3天前</span>
+              </div>
+              <div class="flex justify-between text-sm">
+                <span class="text-text-muted-light dark:text-text-muted-dark">对话次数</span>
+                <span>5</span>
+              </div>
+            </div>
+
+            <div class="mb-4">
+              <p class="text-sm text-text-muted-light dark:text-text-muted-dark mb-2">关键词</p>
+              <div class="flex flex-wrap gap-2">
+                <span class="px-2 py-1 bg-primary/10 text-primary text-xs rounded">文静</span>
+                <span class="px-2 py-1 bg-primary/10 text-primary text-xs rounded">书虫</span>
+                <span class="px-2 py-1 bg-primary/10 text-primary text-xs rounded">害羞</span>
+              </div>
+            </div>
+
+            <div class="flex gap-2">
+              <button class="flex-1 bg-primary text-white py-2 px-4 rounded-lg text-sm font-medium hover:bg-primary/90 transition-colors" onclick="viewCharacterHistory('hana')">
+                查看历史
+              </button>
+              <button class="px-4 py-2 border border-surface-light dark:border-surface-dark rounded-lg text-sm hover:bg-surface-light dark:hover:bg-surface-dark transition-colors" onclick="viewCharacterDetail('hana')">
+                详情
+              </button>
+            </div>
+          </div>
+        </div>
+      </div>
+    </main>
+  </div>
+
+  <script>
+    // 查看角色的历史对话
+    function viewCharacterHistory(characterId) {
+      console.log('Viewing history for character:', characterId);
+      // 跳转到历史对话页面，并过滤显示该角色的对话
+      window.location.href = `./conversation-editor.html?character=${characterId}`;
+    }
+
+    // 查看角色详情
+    function viewCharacterDetail(characterId) {
+      console.log('Viewing detail for character:', characterId);
+      // 这里可以显示角色详情弹窗或跳转到详情页面
+      alert(`查看 ${characterId} 的详细信息\n\n这里可以显示：\n- 角色档案\n- 性格特点\n- 喜好厌恶\n- 重要事件\n- 对话总结`);
+    }
+
+    console.log('Characters page loaded');
+  </script>
+</body>
+</html>

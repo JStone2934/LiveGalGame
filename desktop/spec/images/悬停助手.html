@@ -1,0 +1,182 @@
+<!DOCTYPE html>
+<html lang="zh-CN"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>LiveGalGame AI 助手</title>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<link href="https://fonts.googleapis.com" rel="preconnect"/>
+<link crossorigin="" href="https://fonts.gstatic.com" rel="preconnect"/>
+<link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:ital,wght@0,200..800;1,200..800&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Noto+Sans+SC:wght@400;500;700&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined" rel="stylesheet"/>
+<style>
+    body {
+      background-image: url('https://images.unsplash.com/photo-1554189097-94974246b282?q=80&w=2574&auto=format&fit=crop');
+      background-size: cover;
+      background-position: center;
+      position: relative;
+    }
+  </style>
+<script id="tailwind-config">
+    tailwind.config = {
+      darkMode: "class",
+      theme: {
+        extend: {
+          colors: {
+            "primary": "#E91E63", // Keeping this for reference, but new design uses Apple-like blue
+            "background-light": "#f8f6f7",
+            "background-dark": "#211118",
+          },
+          fontFamily: {
+            "display": ["Plus Jakarta Sans", "'Noto Sans SC'", "sans-serif"]
+          },
+          borderRadius: {"DEFAULT": "1rem", "lg": "1.25rem", "xl": "3rem", "full": "9999px"},
+        },
+      },
+    }
+  </script>
+</head>
+<body class="font-display">
+<div class="relative flex h-auto min-h-screen w-full flex-col items-center justify-center p-4 lg:p-10">
+<div class="absolute right-4 top-4 flex w-[350px] flex-col overflow-hidden rounded-lg bg-gray-100/60 shadow-2xl backdrop-blur-2xl ring-1 ring-black/5">
+<div class="flex h-10 shrink-0 cursor-move items-center justify-between bg-gray-200/40 px-3 py-2">
+<p class="text-sm font-semibold text-gray-800">对话: Evelyn</p>
+<div class="flex items-center gap-1 text-gray-600">
+<button class="flex h-6 w-6 items-center justify-center rounded-full hover:bg-black/10">
+<span class="material-symbols-outlined text-base">push_pin</span>
+</button>
+<button class="flex h-6 w-6 items-center justify-center rounded-full hover:bg-black/10">
+<span class="material-symbols-outlined text-base">close</span>
+</button>
+</div>
+</div>
+<div class="flex flex-1 flex-col overflow-y-auto px-2 pt-2" style="max-height: 350px;">
+<div class="flex items-end gap-2 p-2">
+<div class="flex flex-1 flex-col items-start gap-1">
+<p class="rounded-xl bg-white/60 px-3 py-2 text-sm font-normal leading-normal text-gray-900 shadow-sm">没想到今晚会在这里见到你。</p>
+</div>
+</div>
+<div class="flex items-end justify-end gap-2 p-2">
+<div class="flex flex-1 flex-col items-end gap-1">
+<p class="rounded-xl bg-blue-500/80 px-3 py-2 text-sm font-normal leading-normal text-white shadow-sm">这个城市充满了惊喜，不是吗？</p>
+</div>
+</div>
+<div class="flex items-end gap-2 p-2">
+<div class="relative flex flex-1 flex-col items-start gap-1">
+<p class="rounded-xl bg-white/60 px-3 py-2 text-sm font-normal leading-normal text-gray-900 shadow-sm">也可以这么说。我听说你在调查“猩红集团”的案子。</p>
+</div>
+</div>
+<div class="flex items-end justify-end gap-2 p-2">
+<div class="flex flex-1 flex-col items-end gap-1">
+<p class="rounded-xl bg-blue-500/80 px-3 py-2 text-sm font-normal leading-normal text-white shadow-sm">只是跟进几条线索，还没什么实质进展。</p>
+</div>
+</div>
+</div>
+<div class="flex flex-col gap-2 border-t border-black/10 bg-gray-200/40 p-3">
+<p class="text-xs font-semibold text-gray-500">AI 推荐:</p>
+<div class="flex flex-col gap-2">
+<div class="flex cursor-pointer flex-col gap-2 rounded-md bg-white/40 p-2.5 transition-colors hover:bg-white/60">
+<p class="text-sm font-normal text-gray-800">“你似乎对此了解很多。愿意分享一下吗？”</p>
+<div class="flex items-center gap-2">
+<div class="rounded-full bg-green-500/20 px-2 py-0.5 text-xs font-medium text-green-700">积极</div>
+<div class="rounded-full bg-blue-500/20 px-2 py-0.5 text-xs font-medium text-blue-700">最佳匹配</div>
+</div>
+</div>
+<div class="flex cursor-pointer flex-col gap-2 rounded-md bg-white/40 p-2.5 transition-colors hover:bg-white/60">
+<p class="text-sm font-normal text-gray-800">“这是一条危险的路。我建议你远离。”</p>
+<div class="flex items-center gap-2">
+<div class="rounded-full bg-yellow-500/20 px-2 py-0.5 text-xs font-medium text-yellow-700">中性</div>
+<div class="rounded-full bg-indigo-500/20 px-2 py-0.5 text-xs font-medium text-indigo-700">创意</div>
+</div>
+</div>
+</div>
+</div>
+<div class="flex shrink-0 flex-col border-t border-black/10 bg-gray-200/40">
+<div class="flex h-6 items-center justify-center px-4">
+<p class="text-center text-xs font-medium text-gray-500">AI 思考中...</p>
+</div>
+<div class="flex h-16 items-center justify-between px-4 pb-1">
+<div class="flex items-center gap-2">
+<div class="relative h-10 w-10">
+<svg class="h-full w-full" viewBox="0 0 36 36">
+<path d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831" fill="none" stroke="#000000" stroke-opacity="0.1" stroke-width="3"></path>
+<path d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831" fill="none" stroke="#22c55e" stroke-dasharray="75, 100" stroke-linecap="round" stroke-width="3"></path>
+</svg>
+<div class="absolute inset-0 flex items-center justify-center">
+<span class="material-symbols-outlined text-lg text-green-600">sentiment_very_satisfied</span>
+</div>
+</div>
+</div>
+<div class="flex items-center gap-2">
+<button class="flex h-10 w-10 items-center justify-center rounded-full text-gray-600 hover:bg-black/10">
+<span class="material-symbols-outlined">pause</span>
+</button>
+<button class="flex h-12 w-12 items-center justify-center rounded-full bg-blue-500 text-white shadow-lg hover:bg-blue-600">
+<span class="material-symbols-outlined">auto_awesome</span>
+</button>
+<button class="flex h-10 w-10 items-center justify-center rounded-full text-gray-600 hover:bg-black/10">
+<span class="material-symbols-outlined">settings</span>
+</button>
+</div>
+</div>
+</div>
+<div class="absolute inset-0 z-10 flex h-full w-full translate-x-full flex-col bg-gray-100/70 backdrop-blur-md transition-transform duration-300 ease-out">
+<div class="flex h-10 shrink-0 items-center justify-between border-b border-black/10 px-4">
+<h3 class="text-base font-semibold text-gray-800">AI 选项</h3>
+<button class="flex h-7 w-7 items-center justify-center rounded-full text-gray-700 hover:bg-black/10">
+<span class="material-symbols-outlined text-xl">close</span>
+</button>
+</div>
+<div class="flex-1 space-y-4 overflow-y-auto p-4 text-gray-800">
+<div class="space-y-3">
+<h4 class="text-sm font-semibold text-gray-600">重要时刻</h4>
+<div class="flex flex-col gap-2.5">
+<div class="rounded-lg bg-white/50 p-2.5 shadow-sm ring-1 ring-black/5">
+<p class="text-sm text-gray-700">提及“猩红集团”</p>
+<p class="text-xs text-gray-500">Evelyn似乎在调查此案。</p>
+</div>
+<div class="rounded-lg bg-white/50 p-2.5 shadow-sm ring-1 ring-black/5">
+<p class="text-sm text-gray-700">意外的相遇</p>
+<p class="text-xs text-gray-500">对话开头的关键转折点。</p>
+</div>
+</div>
+</div>
+<div class="space-y-2 pt-4">
+<label class="text-sm font-medium" for="transparency">窗口透明度</label>
+<input class="h-1.5 w-full cursor-pointer appearance-none rounded-full bg-black/10 accent-blue-500" id="transparency" max="100" min="20" type="range" value="80"/>
+</div>
+<div class="space-y-2">
+<label class="text-sm font-medium" for="audio-source">音频输入</label>
+<select class="w-full rounded-md border-none bg-black/5 py-2 text-sm text-gray-800 focus:ring-2 focus:ring-blue-500">
+<option>默认系统麦克风</option>
+<option>外置 USB 麦克风</option>
+</select>
+</div>
+<div class="flex items-center justify-between">
+<span class="text-sm font-medium">自动建议触发</span>
+<button class="h-6 w-11 rounded-full bg-blue-500 p-1">
+<span class="block h-4 w-4 translate-x-[100%] rounded-full bg-white transition"></span>
+</button>
+</div>
+<div class="flex items-center justify-between">
+<span class="text-sm font-medium">紧凑显示模式</span>
+<button class="h-6 w-11 rounded-full bg-gray-300 p-1">
+<span class="block h-4 w-4 translate-x-0 rounded-full bg-white transition"></span>
+</button>
+</div>
+</div>
+</div>
+</div>
+<div class="absolute bottom-10 right-10 flex h-20 w-20 items-center justify-center rounded-full bg-white/80 shadow-2xl backdrop-blur-lg ring-1 ring-black/5">
+<div class="relative h-16 w-16">
+<svg class="h-full w-full" viewBox="0 0 36 36">
+<path d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831" fill="none" stroke="#000000" stroke-opacity="0.1" stroke-width="3"></path>
+<path d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831" fill="none" stroke="#f43f5e" stroke-dasharray="25, 100" stroke-linecap="round" stroke-width="3"></path>
+</svg>
+<div class="absolute inset-0 flex items-center justify-center">
+<span class="material-symbols-outlined text-3xl text-rose-500">sentiment_very_dissatisfied</span>
+</div>
+</div>
+</div>
+</div>
+</body></html>

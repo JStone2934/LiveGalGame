@@ -17,7 +17,12 @@ contextBridge.exposeInMainWorld('electronAPI', {
   // HUD控制
   showHUD: () => ipcRenderer.send('show-hud'),
   hideHUD: () => ipcRenderer.send('hide-hud'),
-  closeHUD: () => ipcRenderer.send('close-hud')
+  closeHUD: () => ipcRenderer.send('close-hud'),
+
+  // HUD拖拽
+  startHUDDrag: (pos) => ipcRenderer.send('start-hud-drag', pos),
+  updateHUDDrag: (pos) => ipcRenderer.send('update-hud-drag', pos),
+  endHUDDrag: () => ipcRenderer.send('end-hud-drag')
 });
 
 // 监听主进程消息

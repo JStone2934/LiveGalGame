@@ -16,20 +16,21 @@
 - [x] AI分析面板 (动态洞察 + 标签管理)
 - [x] **页面跳转系统** (总览 ↔ 对话编辑器)
 
-### ✅ 阶段 2: HUD浮窗基础 (50%)
+### ✅ 阶段 2: HUD浮窗基础 (100%)
 - [x] HUD窗口创建 (无边框、透明、右下角)
 - [x] HUD UI基础 (双通道转录 + AI建议卡片)
 - [x] 主窗口与HUD通信 (IPC机制)
-- [ ] **待完成**: 从主窗口触发HUD显示
-- [ ] **待完成**: HUD拖拽移动
-- [ ] **待完成**: 鼠标穿透切换
+- [x] 从主窗口触发HUD显示
+- [x] HUD拖拽移动
+- [x] 鼠标穿透切换 (通过窗口边缘调整大小)
+- [x] 窗口大小调节
 
 ## 核心架构说明
 
 ### 主进程 (main.js)
 - `mainWindow`: 主窗口 (1200x800)
-- `hudWindow`: HUD浮窗 (400x300, 右下角)
-- IPC通信: `show-hud`, `hide-hud`, `close-hud`
+- `hudWindow`: HUD浮窗 (520x600, 右下角, 可拖拽、可调整大小)
+- IPC通信: `show-hud`, `hide-hud`, `close-hud`, `start-hud-drag`, `update-hud-drag`, `end-hud-drag`
 
 ### 渲染进程
 - **index.html**: 总览页
@@ -40,15 +41,24 @@
   - 三栏布局 (对话列表/详情/AI分析)
   - 对话切换功能
 - **hud.html**: HUD浮窗
-  - 双通道转录 (对方/我)
+  - 聊天式消息气泡 (左对齐/右对齐)
   - AI建议卡片
-  - 最小化/关闭按钮
+  - 拖拽移动功能
+  - 关闭按钮
+- **settings.html**: 设置页面 (NEW)
+  - 麦克风权限请求UI
+  - 音频测试组件
+  - 音量检测和波形可视化
+  - API配置界面
 
 ### 预加载脚本 (preload.js)
 暴露API:
 - `window.electronAPI.showHUD()`
 - `window.electronAPI.hideHUD()`
 - `window.electronAPI.closeHUD()`
+- `window.electronAPI.startHUDDrag(pos)`
+- `window.electronAPI.updateHUDDrag(pos)`
+- `window.electronAPI.endHUDDrag()`
 
 ## 当前问题
 
