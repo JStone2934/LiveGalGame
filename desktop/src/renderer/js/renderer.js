@@ -4,57 +4,8 @@ console.log('Renderer process loaded');
 // 当前选中的对话
 let currentConversation = null;
 
-// 对话数据（示例）
-const conversations = {
-  miyu: {
-    id: 'miyu',
-    name: 'Miyu',
-    avatarColor: '#ff6b6b',
-    tags: ['愉快', '日常'],
-    messages: [
-      {
-        id: 1,
-        sender: 'other',
-        text: '哦，真的吗？我刚才还在想，待会儿要不要去散散步。这个季节的樱花应该很美。',
-        timestamp: '2025-11-13 10:30:00'
-      },
-      {
-        id: 2,
-        sender: 'user',
-        text: '听起来真不错！也许我们可以一起去？',
-        timestamp: '2025-11-13 10:31:00'
-      }
-    ]
-  },
-  akira: {
-    id: 'akira',
-    name: 'Akira',
-    avatarColor: '#4ecdc4',
-    tags: ['紧张', '关键剧情'],
-    messages: [
-      {
-        id: 1,
-        sender: 'other',
-        text: '别忘了我们的约定！',
-        timestamp: '2025-11-13 09:15:00'
-      }
-    ]
-  },
-  hana: {
-    id: 'hana',
-    name: 'Hana',
-    avatarColor: '#ffe66d',
-    tags: ['愉快', '日常'],
-    messages: [
-      {
-        id: 1,
-        sender: 'other',
-        text: '我今天发现了一家超可爱的小咖啡馆。',
-        timestamp: '2025-11-13 08:45:00'
-      }
-    ]
-  }
-};
+// 对话数据（将从数据库加载）
+let conversations = {};
 
 // DOM加载完成后执行
 document.addEventListener('DOMContentLoaded', () => {
@@ -78,7 +29,6 @@ function setupHUDControl() {
       console.log('Show HUD button clicked');
       if (window.electronAPI && window.electronAPI.showHUD) {
         window.electronAPI.showHUD();
-        alert('HUD浮窗已打开（如果未显示，请检查日志）');
       } else {
         console.error('electronAPI.showHUD not available');
         alert('electronAPI.showHUD 不可用');
@@ -244,7 +194,7 @@ function renderMessages(messages) {
           <div class="relative group">
             <p class="text-base font-normal leading-normal rounded-2xl ${isUser ? 'rounded-br-md' : 'rounded-bl-md'}
                        px-4 py-3 ${isUser ? 'bg-primary text-white' : 'bg-surface-light dark:bg-surface-dark text-text-light dark:text-text-dark'}">
-              ${msg.text}
+              ${msg.content || msg.text || ''}
             </p>
             <div class="absolute ${isUser ? '-left-2' : '-right-2'} top-1/2 -translate-y-1/2 opacity-0 group-hover:opacity-100 transition-opacity">
               <button class="p-1.5 rounded-full bg-background-light dark:bg-background-dark hover:bg-primary/20">

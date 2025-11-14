@@ -222,13 +222,10 @@
     <!-- 转录区域 -->
     <div class="section">
       <div class="transcript-area" id="transcript-messages">
-        <!-- 对方消息（左对齐） -->
-        <div class="message-item message-other">
-          <div class="message-bubble">哦，真的吗？我刚才还在想，待会儿要不要去散散步。这个季节的樱花应该很美。</div>
-        </div>
-        <!-- 我的消息（右对齐） -->
-        <div class="message-item message-user">
-          <div class="message-bubble">听起来真不错！也许我们可以一起去？</div>
+        <!-- 消息将从数据库加载 -->
+        <div class="text-center py-4">
+          <div class="inline-block animate-spin rounded-full h-4 w-4 border-b-2 border-primary"></div>
+          <p class="mt-2 text-xs text-text-muted-light dark:text-text-muted-dark">加载中...</p>
         </div>
       </div>
     </div>
@@ -356,6 +353,77 @@
 
     console.log('HUD script loaded successfully');
     console.log('electronAPI available:', !!window.electronAPI);
+
+    // 加载最近对话的消息
+    async function loadRecentMessages() {
+      try {
+        if (window.electronAPI && window.electronAPI.getRecentConversations) {
+          // 获取最近的对话
+          const conversations = await window.electronAPI.getRecentConversations(1);
+          
+          if (conversations.length === 0) {
+            document.getElementById('transcript-messages').innerHTML = `
+              <div class="text-center py-4">
+                <p class="text-sm text-text-muted-light dark:text-text-muted-dark">还没有对话记录</p>
+              </div>
+            `;
+            return;
+          }
+
+          // 获取该对话的消息
+          const conversationId = conversations[0].id;
+          const messages = await window.electronAPI.getMessagesByConversation(conversationId);
+          
+          renderMessages(messages);
+        } else {
+          console.error('Database API not available');
+          document.getElementById('transcript-messages').innerHTML = `
+            <div class="text-center py-4">
+              <p class="text-xs text-red-500">数据库API不可用</p>
+            </div>
+          `;
+        }
+      } catch (error) {
+        console.error('Failed to load messages:', error);
+        document.getElementById('transcript-messages').innerHTML = `
+          <div class="text-center py-4">
+            <p class="text-xs text-red-500">加载失败：${error.message}</p>
+          </div>
+        `;
+      }
+    }
+
+    // 渲染消息
+    function renderMessages(messages) {
+      const container = document.getElementById('transcript-messages');
+      
+      if (messages.length === 0) {
+        container.innerHTML = `
+          <div class="text-center py-4">
+            <p class="text-sm text-text-muted-light dark:text-text-muted-dark">该对话还没有消息</p>
+          </div>
+        `;
+        return;
+      }
+
+      container.innerHTML = messages.map(msg => {
+        const isUser = msg.sender === 'user';
+        return `
+          <div class="message-item ${isUser ? 'message-user' : 'message-other'}">
+            <div class="message-bubble">${msg.content}</div>
+          </div>
+        `;
+      }).join('');
+
+      // 滚动到底部
+      container.scrollTop = container.scrollHeight;
+    }
+
+    // 页面加载时加载消息
+    document.addEventListener('DOMContentLoaded', () => {
+      console.log('HUD page loaded');
+      loadRecentMessages();
+    });
   </script>
 </body>
 </html>

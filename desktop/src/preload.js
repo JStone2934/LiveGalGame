@@ -22,7 +22,17 @@ contextBridge.exposeInMainWorld('electronAPI', {
   // HUD拖拽
   startHUDDrag: (pos) => ipcRenderer.send('start-hud-drag', pos),
   updateHUDDrag: (pos) => ipcRenderer.send('update-hud-drag', pos),
-  endHUDDrag: () => ipcRenderer.send('end-hud-drag')
+  endHUDDrag: () => ipcRenderer.send('end-hud-drag'),
+
+  // 数据库API
+  getAllCharacters: () => ipcRenderer.invoke('db-get-all-characters'),
+  getCharacterById: (id) => ipcRenderer.invoke('db-get-character-by-id', id),
+  createCharacter: (characterData) => ipcRenderer.invoke('db-create-character', characterData),
+  getConversationsByCharacter: (characterId) => ipcRenderer.invoke('db-get-conversations-by-character', characterId),
+  getMessagesByConversation: (conversationId) => ipcRenderer.invoke('db-get-messages-by-conversation', conversationId),
+  getStatistics: () => ipcRenderer.invoke('db-get-statistics'),
+  getRecentConversations: (limit) => ipcRenderer.invoke('db-get-recent-conversations', limit),
+  getAllConversations: () => ipcRenderer.invoke('db-get-all-conversations')
 });
 
 // 监听主进程消息

@@ -114,155 +114,11 @@
         </div>
 
         <!-- 攻略对象列表 -->
-        <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-          <!-- Miyu -->
-          <div class="bg-white dark:bg-surface-dark rounded-xl p-6 border border-surface-light dark:border-surface-dark hover:shadow-lg transition-shadow">
-            <div class="flex items-center gap-4 mb-4">
-              <div class="w-16 h-16 rounded-full bg-gradient-to-br from-[#ff6b6b] to-[#ff8e8e] flex items-center justify-center text-white text-xl font-bold">M</div>
-              <div>
-                <h3 class="text-lg font-bold">Miyu</h3>
-                <p class="text-sm text-text-muted-light dark:text-text-muted-dark">青梅竹马</p>
-              </div>
-            </div>
-
-            <div class="mb-4">
-              <div class="flex justify-between text-sm mb-1">
-                <span>好感度</span>
-                <span>75%</span>
-              </div>
-              <div class="w-full bg-gray-200 dark:bg-gray-700 rounded-full h-2">
-                <div class="bg-primary h-2 rounded-full" style="width: 75%"></div>
-              </div>
-            </div>
-
-            <div class="space-y-2 mb-4">
-              <div class="flex justify-between text-sm">
-                <span class="text-text-muted-light dark:text-text-muted-dark">最近对话</span>
-                <span>2小时前</span>
-              </div>
-              <div class="flex justify-between text-sm">
-                <span class="text-text-muted-light dark:text-text-muted-dark">对话次数</span>
-                <span>12</span>
-              </div>
-            </div>
-
-            <div class="mb-4">
-              <p class="text-sm text-text-muted-light dark:text-text-muted-dark mb-2">关键词</p>
-              <div class="flex flex-wrap gap-2">
-                <span class="px-2 py-1 bg-primary/10 text-primary text-xs rounded">活泼</span>
-                <span class="px-2 py-1 bg-primary/10 text-primary text-xs rounded">可爱</span>
-                <span class="px-2 py-1 bg-primary/10 text-primary text-xs rounded">关心</span>
-              </div>
-            </div>
-
-            <div class="flex gap-2">
-              <button class="flex-1 bg-primary text-white py-2 px-4 rounded-lg text-sm font-medium hover:bg-primary/90 transition-colors" onclick="viewCharacterHistory('miyu')">
-                查看历史
-              </button>
-              <button class="px-4 py-2 border border-surface-light dark:border-surface-dark rounded-lg text-sm hover:bg-surface-light dark:hover:bg-surface-dark transition-colors" onclick="viewCharacterDetail('miyu')">
-                详情
-              </button>
-            </div>
-          </div>
-
-          <!-- Akira -->
-          <div class="bg-white dark:bg-surface-dark rounded-xl p-6 border border-surface-light dark:border-surface-dark hover:shadow-lg transition-shadow">
-            <div class="flex items-center gap-4 mb-4">
-              <div class="w-16 h-16 rounded-full bg-gradient-to-br from-[#4ecdc4] to-[#6ee5dd] flex items-center justify-center text-white text-xl font-bold">A</div>
-              <div>
-                <h3 class="text-lg font-bold">Akira</h3>
-                <p class="text-sm text-text-muted-light dark:text-text-muted-dark">学生会长</p>
-              </div>
-            </div>
-
-            <div class="mb-4">
-              <div class="flex justify-between text-sm mb-1">
-                <span>好感度</span>
-                <span>60%</span>
-              </div>
-              <div class="w-full bg-gray-200 dark:bg-gray-700 rounded-full h-2">
-                <div class="bg-primary h-2 rounded-full" style="width: 60%"></div>
-              </div>
-            </div>
-
-            <div class="space-y-2 mb-4">
-              <div class="flex justify-between text-sm">
-                <span class="text-text-muted-light dark:text-text-muted-dark">最近对话</span>
-                <span>1天前</span>
-              </div>
-              <div class="flex justify-between text-sm">
-                <span class="text-text-muted-light dark:text-text-muted-dark">对话次数</span>
-                <span>8</span>
-              </div>
-            </div>
-
-            <div class="mb-4">
-              <p class="text-sm text-text-muted-light dark:text-text-muted-dark mb-2">关键词</p>
-              <div class="flex flex-wrap gap-2">
-                <span class="px-2 py-1 bg-primary/10 text-primary text-xs rounded">认真</span>
-                <span class="px-2 py-1 bg-primary/10 text-primary text-xs rounded">负责</span>
-                <span class="px-2 py-1 bg-primary/10 text-primary text-xs rounded">温柔</span>
-              </div>
-            </div>
-
-            <div class="flex gap-2">
-              <button class="flex-1 bg-primary text-white py-2 px-4 rounded-lg text-sm font-medium hover:bg-primary/90 transition-colors" onclick="viewCharacterHistory('akira')">
-                查看历史
-              </button>
-              <button class="px-4 py-2 border border-surface-light dark:border-surface-dark rounded-lg text-sm hover:bg-surface-light dark:hover:bg-surface-dark transition-colors" onclick="viewCharacterDetail('akira')">
-                详情
-              </button>
-            </div>
-          </div>
-
-          <!-- Hana -->
-          <div class="bg-white dark:bg-surface-dark rounded-xl p-6 border border-surface-light dark:border-surface-dark hover:shadow-lg transition-shadow">
-            <div class="flex items-center gap-4 mb-4">
-              <div class="w-16 h-16 rounded-full bg-gradient-to-br from-[#ffe66d] to-[#fff099] flex items-center justify-center text-gray-800 text-xl font-bold">H</div>
-              <div>
-                <h3 class="text-lg font-bold">Hana</h3>
-                <p class="text-sm text-text-muted-light dark:text-text-muted-dark">图书馆管理员</p>
-              </div>
-            </div>
-
-            <div class="mb-4">
-              <div class="flex justify-between text-sm mb-1">
-                <span>好感度</span>
-                <span>45%</span>
-              </div>
-              <div class="w-full bg-gray-200 dark:bg-gray-700 rounded-full h-2">
-                <div class="bg-primary h-2 rounded-full" style="width: 45%"></div>
-              </div>
-            </div>
-
-            <div class="space-y-2 mb-4">
-              <div class="flex justify-between text-sm">
-                <span class="text-text-muted-light dark:text-text-muted-dark">最近对话</span>
-                <span>3天前</span>
-              </div>
-              <div class="flex justify-between text-sm">
-                <span class="text-text-muted-light dark:text-text-muted-dark">对话次数</span>
-                <span>5</span>
-              </div>
-            </div>
-
-            <div class="mb-4">
-              <p class="text-sm text-text-muted-light dark:text-text-muted-dark mb-2">关键词</p>
-              <div class="flex flex-wrap gap-2">
-                <span class="px-2 py-1 bg-primary/10 text-primary text-xs rounded">文静</span>
-                <span class="px-2 py-1 bg-primary/10 text-primary text-xs rounded">书虫</span>
-                <span class="px-2 py-1 bg-primary/10 text-primary text-xs rounded">害羞</span>
-              </div>
-            </div>
-
-            <div class="flex gap-2">
-              <button class="flex-1 bg-primary text-white py-2 px-4 rounded-lg text-sm font-medium hover:bg-primary/90 transition-colors" onclick="viewCharacterHistory('hana')">
-                查看历史
-              </button>
-              <button class="px-4 py-2 border border-surface-light dark:border-surface-dark rounded-lg text-sm hover:bg-surface-light dark:hover:bg-surface-dark transition-colors" onclick="viewCharacterDetail('hana')">
-                详情
-              </button>
-            </div>
+        <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6" id="characters-container">
+          <!-- 角色数据将从数据库加载 -->
+          <div class="text-center py-12" id="loading-indicator">
+            <div class="inline-block animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
+            <p class="mt-4 text-text-muted-light dark:text-text-muted-dark">加载中...</p>
           </div>
         </div>
       </div>
@@ -284,7 +140,129 @@
       alert(`查看 ${characterId} 的详细信息\n\n这里可以显示：\n- 角色档案\n- 性格特点\n- 喜好厌恶\n- 重要事件\n- 对话总结`);
     }
 
-    console.log('Characters page loaded');
+    // 加载角色数据
+    async function loadCharacters() {
+      try {
+        // 从数据库加载数据
+        if (window.electronAPI && window.electronAPI.getAllCharacters) {
+          const characters = await window.electronAPI.getAllCharacters();
+
+          if (characters.length === 0) {
+            // 数据库为空，显示空状态
+            const container = document.getElementById('characters-container');
+            const loadingIndicator = document.getElementById('loading-indicator');
+            loadingIndicator.style.display = 'none';
+            container.innerHTML = `
+              <div class="col-span-full text-center py-12">
+                <p class="text-text-muted-light dark:text-text-muted-dark mb-4">还没有角色数据</p>
+                <p class="text-sm text-text-muted-light dark:text-text-muted-dark">请在数据库中添加角色数据</p>
+              </div>
+            `;
+          } else {
+            renderCharacters(characters);
+          }
+        } else {
+          console.error('Database API not available');
+          document.getElementById('loading-indicator').innerHTML = '<p class="text-red-500">数据库API不可用</p>';
+        }
+      } catch (error) {
+        console.error('Failed to load characters:', error);
+        document.getElementById('loading-indicator').innerHTML = '<p class="text-red-500">加载失败：' + error.message + '</p>';
+      }
+    }
+
+    // 渲染角色卡片
+    function renderCharacters(characters) {
+      const container = document.getElementById('characters-container');
+      const loadingIndicator = document.getElementById('loading-indicator');
+
+      // 隐藏加载指示器
+      loadingIndicator.style.display = 'none';
+
+      // 清空容器
+      container.innerHTML = '';
+
+      // 渲染每个角色
+      characters.forEach(character => {
+        const characterCard = createCharacterCard(character);
+        container.appendChild(characterCard);
+      });
+    }
+
+    // 创建角色卡片
+    function createCharacterCard(character) {
+      const card = document.createElement('div');
+      card.className = 'bg-white dark:bg-surface-dark rounded-xl p-6 border border-surface-light dark:border-surface-dark hover:shadow-lg transition-shadow';
+
+      const firstLetter = character.name.charAt(0);
+      const avatarGradient = getAvatarGradient(character.avatar_color);
+
+      card.innerHTML = `
+        <div class="flex items-center gap-4 mb-4">
+          <div class="w-16 h-16 rounded-full ${avatarGradient} flex items-center justify-center text-white text-xl font-bold">
+            ${firstLetter}
+          </div>
+          <div>
+            <h3 class="text-lg font-bold">${character.name}</h3>
+            <p class="text-sm text-text-muted-light dark:text-text-muted-dark">${character.relationship_label}</p>
+          </div>
+        </div>
+
+        <div class="mb-4">
+          <div class="flex justify-between text-sm mb-1">
+            <span>好感度</span>
+            <span>${character.affinity}%</span>
+          </div>
+          <div class="w-full bg-gray-200 dark:bg-gray-700 rounded-full h-2">
+            <div class="bg-primary h-2 rounded-full" style="width: ${character.affinity}%"></div>
+          </div>
+        </div>
+
+        <div class="space-y-2 mb-4">
+          <div class="flex justify-between text-sm">
+            <span class="text-text-muted-light dark:text-text-muted-dark">角色ID</span>
+            <span class="font-mono text-xs">${character.id}</span>
+          </div>
+          <div class="flex justify-between text-sm">
+            <span class="text-text-muted-light dark:text-text-muted-dark">创建时间</span>
+            <span>${new Date(character.created_at).toLocaleDateString('zh-CN')}</span>
+          </div>
+        </div>
+
+        <div class="mb-4">
+          <p class="text-sm text-text-muted-light dark:text-text-muted-dark mb-2">关键词</p>
+          <div class="flex flex-wrap gap-2">
+            ${character.tags.map(tag => `<span class="px-2 py-1 bg-primary/10 text-primary text-xs rounded">${tag}</span>`).join('')}
+          </div>
+        </div>
+
+        <div class="flex gap-2">
+          <button class="flex-1 bg-primary text-white py-2 px-4 rounded-lg text-sm font-medium hover:bg-primary/90 transition-colors" onclick="viewCharacterHistory('${character.id}')">
+            查看历史
+          </button>
+          <button class="px-4 py-2 border border-surface-light dark:border-surface-dark rounded-lg text-sm hover:bg-surface-light dark:hover:bg-surface-dark transition-colors" onclick="viewCharacterDetail('${character.id}')">
+            详情
+          </button>
+        </div>
+      `;
+
+      return card;
+    }
+
+    // 获取头像渐变样式
+    function getAvatarGradient(color) {
+      // 简单的渐变生成逻辑
+      if (color.includes('ff6b6b')) return 'bg-gradient-to-br from-[#ff6b6b] to-[#ff8e8e]';
+      if (color.includes('4ecdc4')) return 'bg-gradient-to-br from-[#4ecdc4] to-[#6ee5dd]';
+      if (color.includes('ffe66d')) return 'bg-gradient-to-br from-[#ffe66d] to-[#fff099]';
+      return 'bg-gradient-to-br from-primary to-[#8e24aa]';
+    }
+
+    // 页面加载时初始化
+    document.addEventListener('DOMContentLoaded', () => {
+      console.log('Characters page loaded');
+      loadCharacters();
+    });
   </script>
 </body>
 </html>

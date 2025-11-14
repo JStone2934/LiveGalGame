@@ -123,42 +123,11 @@
         </header>
 
         <!-- 统计卡片 -->
-        <div class="mb-8 grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-4">
-          <div class="stat-card flex items-start gap-4 rounded-xl border border-border-light dark:border-border-dark bg-surface-light dark:bg-surface-dark p-5 shadow-sm">
-            <div class="stat-icon flex size-12 items-center justify-center rounded-lg bg-primary-subtle-light dark:bg-primary-subtle-dark text-primary">
-              <span class="material-symbols-outlined text-3xl">groups</span>
-            </div>
-            <div>
-              <p class="stat-label text-sm font-medium text-text-muted-light dark:text-text-muted-dark">攻略对象</p>
-              <p class="stat-value text-3xl font-bold text-text-light dark:text-text-dark">12</p>
-            </div>
-          </div>
-          <div class="stat-card flex items-start gap-4 rounded-xl border border-border-light dark:border-border-dark bg-surface-light dark:bg-surface-dark p-5 shadow-sm">
-            <div class="stat-icon flex size-12 items-center justify-center rounded-lg bg-primary-subtle-light dark:bg-primary-subtle-dark text-primary">
-              <span class="material-symbols-outlined text-3xl">chat_bubble</span>
-            </div>
-            <div>
-              <p class="stat-label text-sm font-medium text-text-muted-light dark:text-text-muted-dark">对话</p>
-              <p class="stat-value text-3xl font-bold text-text-light dark:text-text-dark">89</p>
-            </div>
-          </div>
-          <div class="stat-card flex items-start gap-4 rounded-xl border border-border-light dark:border-border-dark bg-surface-light dark:bg-surface-dark p-5 shadow-sm">
-            <div class="stat-icon flex size-12 items-center justify-center rounded-lg bg-primary-subtle-light dark:bg-primary-subtle-dark text-primary">
-              <span class="material-symbols-outlined text-3xl">account_tree</span>
-            </div>
-            <div>
-              <p class="stat-label text-sm font-medium text-text-muted-light dark:text-text-muted-dark">分支</p>
-              <p class="stat-value text-3xl font-bold text-text-light dark:text-text-dark">256</p>
-            </div>
-          </div>
-          <div class="stat-card flex items-start gap-4 rounded-xl border border-border-light dark:border-border-dark bg-surface-light dark:bg-surface-dark p-5 shadow-sm">
-            <div class="stat-icon flex size-12 items-center justify-center rounded-lg bg-primary-subtle-light dark:bg-primary-subtle-dark text-primary">
-              <span class="material-symbols-outlined text-3xl">flag</span>
-            </div>
-            <div>
-              <p class="stat-label text-sm font-medium text-text-muted-light dark:text-text-muted-dark">故事标记</p>
-              <p class="stat-value text-3xl font-bold text-text-light dark:text-text-dark">42</p>
-            </div>
+        <div class="mb-8 grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-4" id="statistics-container">
+          <!-- 统计数据将从数据库加载 -->
+          <div class="text-center py-8">
+            <div class="inline-block animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
+            <p class="mt-4 text-text-muted-light dark:text-text-muted-dark">加载中...</p>
           </div>
         </div>
 
@@ -181,74 +150,156 @@
         </div>
 
         <!-- 最近对话列表 -->
-        <div class="grid grid-cols-1 gap-6 md:grid-cols-2 lg:grid-cols-3">
-          <div class="conversation-card flex flex-col rounded-xl border border-border-light dark:border-border-dark bg-surface-light dark:bg-surface-dark shadow-sm overflow-hidden group">
-            <div class="p-6 flex-grow">
-              <div class="flex items-start justify-between">
-                <h3 class="text-lg font-bold text-text-light dark:text-text-dark mb-2">第1章：命运的相遇</h3>
-                <div class="flex -space-x-2">
-                  <div class="bg-center bg-no-repeat aspect-square bg-cover rounded-full size-8 border-2 border-surface-light dark:border-surface-dark" style="background-color: #ff6b6b;"></div>
-                  <div class="bg-center bg-no-repeat aspect-square bg-cover rounded-full size-8 border-2 border-surface-light dark:border-surface-dark" style="background-color: #4ecdc4;"></div>
-                </div>
-              </div>
-              <p class="text-text-muted-light dark:text-text-muted-dark text-sm line-clamp-2">优衣在樱花节上初次遇见健司的开场场景。确立了他们最初的动态关系。</p>
-            </div>
-            <div class="px-6 py-4 border-t border-border-light dark:border-border-dark bg-primary-subtle-light/50 dark:bg-primary-subtle-dark/50 flex justify-between items-center">
-              <p class="text-xs text-text-muted-light dark:text-text-muted-dark">最后编辑：2天前</p>
-              <button class="opacity-0 group-hover:opacity-100 transition-opacity p-2 rounded-full hover:bg-primary-subtle-light dark:hover:bg-primary-subtle-dark text-text-muted-light dark:text-text-muted-dark hover:text-primary dark:hover:text-white">
-                <span class="material-symbols-outlined text-base">edit</span>
-              </button>
-            </div>
+        <div class="grid grid-cols-1 gap-6 md:grid-cols-2 lg:grid-cols-3" id="conversations-container">
+          <!-- 对话数据将从数据库加载 -->
+          <div class="text-center py-12">
+            <div class="inline-block animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
+            <p class="mt-4 text-text-muted-light dark:text-text-muted-dark">加载中...</p>
           </div>
-
-          <div class="conversation-card flex flex-col rounded-xl border border-border-light dark:border-border-dark bg-surface-light dark:bg-surface-dark shadow-sm overflow-hidden group">
-            <div class="p-6 flex-grow">
-              <div class="flex items-start justify-between">
-                <h3 class="text-lg font-bold text-text-light dark:text-text-dark mb-2">咖啡馆的误会</h3>
-                <div class="flex -space-x-2">
-                  <div class="bg-center bg-no-repeat aspect-square bg-cover rounded-full size-8 border-2 border-surface-light dark:border-surface-dark" style="background-color: #4ecdc4;"></div>
-                  <div class="bg-center bg-no-repeat aspect-square bg-cover rounded-full size-8 border-2 border-surface-light dark:border-surface-dark" style="background-color: #ffe66d;"></div>
-                </div>
-              </div>
-              <p class="text-text-muted-light dark:text-text-muted-dark text-sm line-clamp-2">一个关键的冲突场景。健司看到优衣和她的童年朋友明说话，导致了一个主要的情节点。</p>
-            </div>
-            <div class="px-6 py-4 border-t border-border-light dark:border-border-dark bg-primary-subtle-light/50 dark:bg-primary-subtle-dark/50 flex justify-between items-center">
-              <p class="text-xs text-text-muted-light dark:text-text-muted-dark">最后编辑：5天前</p>
-              <button class="opacity-0 group-hover:opacity-100 transition-opacity p-2 rounded-full hover:bg-primary-subtle-light dark:hover:bg-primary-subtle-dark text-text-muted-light dark:text-text-muted-dark hover:text-primary dark:hover:text-white">
-                <span class="material-symbols-outlined text-base">edit</span>
-              </button>
-            </div>
-          </div>
-
-          <div class="conversation-card flex flex-col rounded-xl border border-border-light dark:border-border-dark bg-surface-light dark:bg-surface-dark shadow-sm overflow-hidden group">
-            <div class="p-6 flex-grow">
-              <div class="flex items-start justify-between">
-                <h3 class="text-lg font-bold text-text-light dark:text-text-dark mb-2">图书馆的告白</h3>
-                <div class="flex -space-x-2">
-                  <div class="bg-center bg-no-repeat aspect-square bg-cover rounded-full size-8 border-2 border-surface-light dark:border-surface-dark" style="background-color: #ff6b6b;"></div>
-                </div>
-              </div>
-              <p class="text-text-muted-light dark:text-text-muted-dark text-sm line-clamp-2">一个感人的独白，优衣在学校图书馆学习到很晚时向玩家表白了她的感情。</p>
-            </div>
-            <div class="px-6 py-4 border-t border-border-light dark:border-border-dark bg-primary-subtle-light/50 dark:bg-primary-subtle-dark/50 flex justify-between items-center">
-              <p class="text-xs text-text-muted-light dark:text-text-muted-dark">最后编辑：1周前</p>
-              <button class="opacity-0 group-hover:opacity-100 transition-opacity p-2 rounded-full hover:bg-primary-subtle-light dark:hover:bg-primary-subtle-dark text-text-muted-light dark:text-text-muted-dark hover:text-primary dark:hover:text-white">
-                <span class="material-symbols-outlined text-base">edit</span>
-              </button>
-            </div>
-          </div>
-
-          <!-- 创建新对话卡片 -->
-          <a href="./conversation-editor.html" class="group flex min-h-48 flex-col items-center justify-center gap-2 rounded-xl border-2 border-dashed border-border-light dark:border-border-dark p-6 text-center transition-colors hover:border-primary/50 hover:bg-primary-subtle-light/50 dark:hover:border-primary/50 dark:hover:bg-primary-subtle-dark/50">
-            <span class="material-symbols-outlined text-4xl text-text-muted-light dark:text-text-muted-dark group-hover:text-primary transition-colors">add_circle</span>
-            <h3 class="font-bold text-text-light dark:text-text-dark">创建新对话</h3>
-            <p class="text-sm text-text-muted-light dark:text-text-muted-dark">从头开始一段新对话。</p>
-          </a>
         </div>
       </div>
     </main>
   </div>
 
   <script src="./js/renderer.js"></script>
+  <script>
+    // 加载统计数据
+    async function loadStatistics() {
+      try {
+        if (window.electronAPI && window.electronAPI.getStatistics) {
+          const stats = await window.electronAPI.getStatistics();
+          renderStatistics(stats);
+        } else {
+          console.error('Database API not available');
+          document.getElementById('statistics-container').innerHTML = '<p class="text-red-500">数据库API不可用</p>';
+        }
+      } catch (error) {
+        console.error('Failed to load statistics:', error);
+        document.getElementById('statistics-container').innerHTML = '<p class="text-red-500">加载失败：' + error.message + '</p>';
+      }
+    }
+
+    // 渲染统计数据
+    function renderStatistics(stats) {
+      const container = document.getElementById('statistics-container');
+      container.innerHTML = `
+        <div class="stat-card flex items-start gap-4 rounded-xl border border-border-light dark:border-border-dark bg-surface-light dark:bg-surface-dark p-5 shadow-sm">
+          <div class="stat-icon flex size-12 items-center justify-center rounded-lg bg-primary-subtle-light dark:bg-primary-subtle-dark text-primary">
+            <span class="material-symbols-outlined text-3xl">groups</span>
+          </div>
+          <div>
+            <p class="stat-label text-sm font-medium text-text-muted-light dark:text-text-muted-dark">攻略对象</p>
+            <p class="stat-value text-3xl font-bold text-text-light dark:text-text-dark">${stats.characterCount}</p>
+          </div>
+        </div>
+        <div class="stat-card flex items-start gap-4 rounded-xl border border-border-light dark:border-border-dark bg-surface-light dark:bg-surface-dark p-5 shadow-sm">
+          <div class="stat-icon flex size-12 items-center justify-center rounded-lg bg-primary-subtle-light dark:bg-primary-subtle-dark text-primary">
+            <span class="material-symbols-outlined text-3xl">chat_bubble</span>
+          </div>
+          <div>
+            <p class="stat-label text-sm font-medium text-text-muted-light dark:text-text-muted-dark">对话</p>
+            <p class="stat-value text-3xl font-bold text-text-light dark:text-text-dark">${stats.conversationCount}</p>
+          </div>
+        </div>
+        <div class="stat-card flex items-start gap-4 rounded-xl border border-border-light dark:border-border-dark bg-surface-light dark:bg-surface-dark p-5 shadow-sm">
+          <div class="stat-icon flex size-12 items-center justify-center rounded-lg bg-primary-subtle-light dark:bg-primary-subtle-dark text-primary">
+            <span class="material-symbols-outlined text-3xl">account_tree</span>
+          </div>
+          <div>
+            <p class="stat-label text-sm font-medium text-text-muted-light dark:text-text-muted-dark">消息</p>
+            <p class="stat-value text-3xl font-bold text-text-light dark:text-text-dark">${stats.messageCount}</p>
+          </div>
+        </div>
+        <div class="stat-card flex items-start gap-4 rounded-xl border border-border-light dark:border-border-dark bg-surface-light dark:bg-surface-dark p-5 shadow-sm">
+          <div class="stat-icon flex size-12 items-center justify-center rounded-lg bg-primary-subtle-light dark:bg-primary-subtle-dark text-primary">
+            <span class="material-symbols-outlined text-3xl">favorite</span>
+          </div>
+          <div>
+            <p class="stat-label text-sm font-medium text-text-muted-light dark:text-text-muted-dark">平均好感度</p>
+            <p class="stat-value text-3xl font-bold text-text-light dark:text-text-dark">${stats.avgAffinity}</p>
+          </div>
+        </div>
+      `;
+    }
+
+    // 加载最近对话
+    async function loadRecentConversations() {
+      try {
+        if (window.electronAPI && window.electronAPI.getRecentConversations) {
+          const conversations = await window.electronAPI.getRecentConversations(10);
+          renderConversations(conversations);
+        } else {
+          console.error('Database API not available');
+          document.getElementById('conversations-container').innerHTML = '<p class="text-red-500">数据库API不可用</p>';
+        }
+      } catch (error) {
+        console.error('Failed to load conversations:', error);
+        document.getElementById('conversations-container').innerHTML = '<p class="text-red-500">加载失败：' + error.message + '</p>';
+      }
+    }
+
+    // 渲染对话列表
+    function renderConversations(conversations) {
+      const container = document.getElementById('conversations-container');
+      
+      if (conversations.length === 0) {
+        container.innerHTML = `
+          <div class="col-span-full text-center py-12">
+            <p class="text-text-muted-light dark:text-text-muted-dark mb-4">还没有对话记录</p>
+            <a href="./conversation-editor.html" class="inline-flex items-center gap-2 px-4 py-2 bg-primary text-white rounded-full hover:opacity-90 transition-opacity">
+              <span class="material-symbols-outlined">add</span>
+              创建第一个对话
+            </a>
+          </div>
+        `;
+        return;
+      }
+
+      container.innerHTML = conversations.map(conv => {
+        const date = new Date(conv.updated_at);
+        const daysAgo = Math.floor((Date.now() - date.getTime()) / (1000 * 60 * 60 * 24));
+        const dateText = daysAgo === 0 ? '今天' : daysAgo === 1 ? '昨天' : `${daysAgo}天前`;
+        
+        return `
+          <div class="conversation-card flex flex-col rounded-xl border border-border-light dark:border-border-dark bg-surface-light dark:bg-surface-dark shadow-sm overflow-hidden group">
+            <div class="p-6 flex-grow">
+              <div class="flex items-start justify-between mb-2">
+                <div class="flex-1">
+                  <h3 class="text-lg font-bold text-text-light dark:text-text-dark mb-1">${conv.title || '无标题对话'}</h3>
+                  <div class="flex items-center gap-2 mb-2">
+                    <div class="bg-center bg-no-repeat aspect-square bg-cover rounded-full size-6 border-2 border-surface-light dark:border-surface-dark" style="background-color: ${conv.character_avatar_color || '#ff6b6b'};"></div>
+                    <span class="text-sm text-text-muted-light dark:text-text-muted-dark">与 ${conv.character_name || '未知角色'} 的对话</span>
+                  </div>
+                </div>
+                <div class="flex -space-x-2">
+                  <div class="bg-center bg-no-repeat aspect-square bg-cover rounded-full size-8 border-2 border-surface-light dark:border-surface-dark" style="background-color: ${conv.character_avatar_color || '#ff6b6b'};"></div>
+                </div>
+              </div>
+              <p class="text-text-muted-light dark:text-text-muted-dark text-sm line-clamp-2">${conv.summary || '暂无摘要'}</p>
+            </div>
+            <div class="px-6 py-4 border-t border-border-light dark:border-border-dark bg-primary-subtle-light/50 dark:bg-primary-subtle-dark/50 flex justify-between items-center">
+              <p class="text-xs text-text-muted-light dark:text-text-muted-dark">最后编辑：${dateText}</p>
+              <button class="opacity-0 group-hover:opacity-100 transition-opacity p-2 rounded-full hover:bg-primary-subtle-light dark:hover:bg-primary-subtle-dark text-text-muted-light dark:text-text-muted-dark hover:text-primary dark:hover:text-white" onclick="window.location.href='./conversation-editor.html?character=${conv.character_id}&conversation=${conv.id}'">
+                <span class="material-symbols-outlined text-base">edit</span>
+              </button>
+            </div>
+          </div>
+        `;
+      }).join('') + `
+        <a href="./conversation-editor.html" class="group flex min-h-48 flex-col items-center justify-center gap-2 rounded-xl border-2 border-dashed border-border-light dark:border-border-dark p-6 text-center transition-colors hover:border-primary/50 hover:bg-primary-subtle-light/50 dark:hover:border-primary/50 dark:hover:bg-primary-subtle-dark/50">
+          <span class="material-symbols-outlined text-4xl text-text-muted-light dark:text-text-muted-dark group-hover:text-primary transition-colors">add_circle</span>
+          <h3 class="font-bold text-text-light dark:text-text-dark">创建新对话</h3>
+          <p class="text-sm text-text-muted-light dark:text-text-muted-dark">从头开始一段新对话。</p>
+        </a>
+      `;
+    }
+
+    // 页面加载时初始化
+    document.addEventListener('DOMContentLoaded', () => {
+      console.log('Index page loaded');
+      loadStatistics();
+      loadRecentConversations();
+    });
+  </script>
 </body>
 </html>

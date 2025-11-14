@@ -19,3 +19,9 @@ signing.properties
 /release.keystore
 /release
 .vscode
+
+# Build output
+/desktop/dist
+
+# Database files
+/desktop/data

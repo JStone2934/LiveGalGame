@@ -1,9 +1,11 @@
 const { app, BrowserWindow, globalShortcut, ipcMain } = require('electron');
 const path = require('path');
+const DatabaseManager = require('./db/database');
 
 // 主窗口实例
 let mainWindow;
 let hudWindow;
+let db;
 
 function createWindow() {
   // 创建浏览器窗口
@@ -123,6 +125,99 @@ function setupIPC() {
   });
 
   console.log('IPC通信已设置');
+
+  // 数据库IPC处理器
+  if (!db) {
+    db = new DatabaseManager();
+    // 不再自动初始化示例数据，数据需要手动在数据库中准备
+  }
+
+  // 获取所有角色
+  ipcMain.handle('db-get-all-characters', () => {
+    try {
+      return db.getAllCharacters();
+    } catch (error) {
+      console.error('Error getting all characters:', error);
+      return [];
+    }
+  });
+
+  // 获取单个角色
+  ipcMain.handle('db-get-character-by-id', (event, id) => {
+    try {
+      return db.getCharacterById(id);
+    } catch (error) {
+      console.error('Error getting character:', error);
+      return null;
+    }
+  });
+
+  // 创建角色
+  ipcMain.handle('db-create-character', (event, characterData) => {
+    try {
+      return db.createCharacter(characterData);
+    } catch (error) {
+      console.error('Error creating character:', error);
+      return null;
+    }
+  });
+
+  // 获取角色的对话
+  ipcMain.handle('db-get-conversations-by-character', (event, characterId) => {
+    try {
+      return db.getConversationsByCharacter(characterId);
+    } catch (error) {
+      console.error('Error getting conversations:', error);
+      return [];
+    }
+  });
+
+  // 获取对话的消息
+  ipcMain.handle('db-get-messages-by-conversation', (event, conversationId) => {
+    try {
+      return db.getMessagesByConversation(conversationId);
+    } catch (error) {
+      console.error('Error getting messages:', error);
+      return [];
+    }
+  });
+
+  // 获取统计数据
+  ipcMain.handle('db-get-statistics', () => {
+    try {
+      return db.getStatistics();
+    } catch (error) {
+      console.error('Error getting statistics:', error);
+      return {
+        characterCount: 0,
+        conversationCount: 0,
+        messageCount: 0,
+        avgAffinity: 0
+      };
+    }
+  });
+
+  // 获取最近对话
+  ipcMain.handle('db-get-recent-conversations', (event, limit) => {
+    try {
+      return db.getRecentConversations(limit || 10);
+    } catch (error) {
+      console.error('Error getting recent conversations:', error);
+      return [];
+    }
+  });
+
+  // 获取所有对话
+  ipcMain.handle('db-get-all-conversations', () => {
+    try {
+      return db.getAllConversations();
+    } catch (error) {
+      console.error('Error getting all conversations:', error);
+      return [];
+    }
+  });
+
+  console.log('Database IPC handlers registered');
 }
 
 // 创建HUD窗口
@@ -157,6 +252,13 @@ function createHUDWindow() {
       },
       title: 'LiveGalGame HUD'
     });
+
+      // 初始化数据库
+      if (!db) {
+        db = new DatabaseManager();
+        // 不再自动初始化示例数据
+      }
+  
 
     // 确保窗口可以调整大小（显式设置）
     hudWindow.setResizable(true);

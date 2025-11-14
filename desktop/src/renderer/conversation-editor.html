@@ -75,32 +75,10 @@
 
           <!-- 对话列表 -->
           <div class="flex flex-col gap-1 mt-2" id="conversation-list">
-            <div class="conversation-item flex items-center gap-3 px-3 py-2 rounded-full bg-surface-light dark:bg-surface-dark cursor-pointer"
-                 data-conversation-id="miyu">
-              <div class="bg-center bg-no-repeat aspect-square bg-cover rounded-full size-8 shrink-0"
-                   style="background-color: #ff6b6b;"></div>
-              <div class="flex-grow overflow-hidden">
-                <p class="text-text-light dark:text-text-dark text-sm font-medium leading-normal truncate">Miyu</p>
-                <p class="text-text-muted-light dark:text-text-muted-dark text-xs truncate">哦，真的吗？我刚才还在想...</p>
-              </div>
-            </div>
-            <div class="conversation-item flex items-center gap-3 px-3 py-2 rounded-full hover:bg-surface-light dark:hover:bg-surface-dark cursor-pointer"
-                 data-conversation-id="akira">
-              <div class="bg-center bg-no-repeat aspect-square bg-cover rounded-full size-8 shrink-0"
-                   style="background-color: #4ecdc4;"></div>
-              <div class="flex-grow overflow-hidden">
-                <p class="text-text-light dark:text-text-dark text-sm font-medium leading-normal truncate">Akira</p>
-                <p class="text-text-muted-light dark:text-text-muted-dark text-xs truncate">别忘了我们的约定！</p>
-              </div>
-            </div>
-            <div class="conversation-item flex items-center gap-3 px-3 py-2 rounded-full hover:bg-surface-light dark:hover:bg-surface-dark cursor-pointer"
-                 data-conversation-id="hana">
-              <div class="bg-center bg-no-repeat aspect-square bg-cover rounded-full size-8 shrink-0"
-                   style="background-color: #ffe66d;"></div>
-              <div class="flex-grow overflow-hidden">
-                <p class="text-text-light dark:text-text-dark text-sm font-medium leading-normal truncate">Hana</p>
-                <p class="text-text-muted-light dark:text-text-muted-dark text-xs truncate">我今天发现了一家超可爱的小咖啡馆。</p>
-              </div>
+            <!-- 对话列表将从数据库加载 -->
+            <div class="text-center py-8" id="conversation-loading">
+              <div class="inline-block animate-spin rounded-full h-6 w-6 border-b-2 border-primary"></div>
+              <p class="mt-2 text-sm text-text-muted-light dark:text-text-muted-dark">加载中...</p>
             </div>
           </div>
         </div>
@@ -130,8 +108,8 @@
       <!-- 欢迎页（默认显示） -->
       <div id="welcome-page" class="flex-1 overflow-y-auto p-4 md:p-6 space-y-6">
         <div class="text-center py-12">
-          <h2 class="text-2xl font-bold text-text-light dark:text-text-dark mb-4">欢迎使用对话编辑器</h2>
-          <p class="text-text-muted-light dark:text-text-muted-dark mb-8">点击左侧对话列表开始编辑</p>
+          <h2 class="text-2xl font-bold text-text-light dark:text-text-dark mb-4">历史对话</h2>
+          <p class="text-text-muted-light dark:text-text-muted-dark mb-8">点击左侧对话列表查看详情</p>
         </div>
       </div>
 
@@ -279,5 +257,230 @@
   </div>
 
   <script src="./js/renderer.js"></script>
+  <script>
+    let currentCharacterId = null;
+    let allConversations = [];
+
+    // 从URL获取参数
+    function getURLParams() {
+      const urlParams = new URLSearchParams(window.location.search);
+      return {
+        character: urlParams.get('character'),
+        conversation: urlParams.get('conversation')
+      };
+    }
+
+    // 选择对话并加载消息
+    async function selectConversation(conversationId) {
+      try {
+        // 更新列表选中状态
+        updateConversationListUI(conversationId);
+        
+        // 隐藏欢迎页，显示对话页
+        document.getElementById('welcome-page').classList.add('hidden');
+        document.getElementById('conversation-page').classList.remove('hidden');
+
+        // 从数据库加载消息
+        if (window.electronAPI && window.electronAPI.getMessagesByConversation) {
+          const messages = await window.electronAPI.getMessagesByConversation(conversationId);
+          
+          // 找到对话信息
+          const conversation = allConversations.find(c => c.id === conversationId);
+          
+          if (conversation) {
+            // 更新对话头部
+            updateConversationHeader(conversation);
+            
+            // 渲染消息
+            renderMessages(messages);
+          } else {
+            console.error('Conversation not found:', conversationId);
+          }
+        } else {
+          console.error('Database API not available');
+        }
+      } catch (error) {
+        console.error('Failed to load conversation:', error);
+      }
+    }
+
+    // 更新对话列表UI选中状态
+    function updateConversationListUI(selectedId) {
+      const items = document.querySelectorAll('.conversation-item');
+      items.forEach(item => {
+        item.classList.remove('bg-surface-light', 'dark:bg-surface-dark');
+        item.classList.add('hover:bg-surface-light', 'dark:hover:bg-surface-dark');
+      });
+
+      const selectedItem = document.querySelector(`[data-conversation-id="${selectedId}"]`);
+      if (selectedItem) {
+        selectedItem.classList.remove('hover:bg-surface-light', 'dark:hover:bg-surface-dark');
+        selectedItem.classList.add('bg-surface-light', 'dark:bg-surface-dark');
+      }
+    }
+
+    // 更新对话头部
+    function updateConversationHeader(conversation) {
+      const avatar = document.querySelector('.conversation-avatar');
+      const title = document.querySelector('.conversation-title');
+      const tags = document.querySelector('.conversation-tags');
+
+      if (avatar && conversation.character_avatar_color) {
+        avatar.style.backgroundColor = conversation.character_avatar_color;
+      }
+      
+      if (title) {
+        const characterName = conversation.character_name || '未知角色';
+        title.innerHTML = `与 ${characterName} 的对话<span class="text-primary">*</span>`;
+      }
+
+      if (tags && conversation.tags) {
+        const tagArray = conversation.tags.split(',').map(t => t.trim()).filter(t => t);
+        tags.innerHTML = tagArray.map(tag => `
+          <span class="inline-flex items-center gap-1.5 bg-blue-100 dark:bg-blue-900/40
+                     text-blue-700 dark:text-blue-300 text-xs font-medium px-2 py-0.5 rounded-full">
+            <span class="material-symbols-outlined text-sm">mood</span><span>${tag}</span>
+          </span>
+        `).join('');
+      }
+    }
+
+    // 渲染消息列表
+    function renderMessages(messages) {
+      const container = document.querySelector('.conversation-messages');
+      if (!container) return;
+
+      if (messages.length === 0) {
+        container.innerHTML = `
+          <div class="text-center py-12">
+            <p class="text-text-muted-light dark:text-text-muted-dark">该对话还没有消息</p>
+          </div>
+        `;
+        return;
+      }
+
+      container.innerHTML = messages.map(msg => {
+        const isUser = msg.sender === 'user';
+        return `
+          <div class="flex items-end gap-3 ${isUser ? 'justify-end ml-auto' : ''} max-w-xl">
+            ${!isUser ? `
+              <div class="bg-center bg-no-repeat aspect-square bg-cover rounded-full w-10 shrink-0"
+                   style="background-color: #ff6b6b;"></div>
+            ` : ''}
+            <div class="flex flex-col gap-1 items-${isUser ? 'end' : 'start'}">
+              <p class="text-text-muted-light dark:text-text-muted-dark text-sm font-medium leading-normal px-1">
+                ${isUser ? '我' : '攻略对象'}
+              </p>
+              <div class="relative group">
+                <p class="text-base font-normal leading-normal rounded-2xl ${isUser ? 'rounded-br-md' : 'rounded-bl-md'}
+                           px-4 py-3 ${isUser ? 'bg-primary text-white' : 'bg-surface-light dark:bg-surface-dark text-text-light dark:text-text-dark'}">
+                  ${msg.content}
+                </p>
+                <div class="absolute ${isUser ? '-left-2' : '-right-2'} top-1/2 -translate-y-1/2 opacity-0 group-hover:opacity-100 transition-opacity">
+                  <button class="p-1.5 rounded-full bg-background-light dark:bg-background-dark hover:bg-primary/20">
+                    <span class="material-symbols-outlined text-lg">edit</span>
+                  </button>
+                </div>
+              </div>
+            </div>
+          </div>
+        `;
+      }).join('');
+
+      // 滚动到底部
+      container.scrollTop = container.scrollHeight;
+    }
+
+    // 加载对话列表
+    async function loadConversations() {
+      try {
+        const params = getURLParams();
+        const characterId = params.character;
+        const conversationId = params.conversation;
+        currentCharacterId = characterId;
+
+        const conversationList = document.getElementById('conversation-list');
+        const loadingIndicator = document.getElementById('conversation-loading');
+
+        if (characterId) {
+          // 如果指定了角色ID，只加载该角色的对话
+          if (window.electronAPI && window.electronAPI.getConversationsByCharacter) {
+            allConversations = await window.electronAPI.getConversationsByCharacter(characterId);
+            
+            // 获取角色信息
+            const character = await window.electronAPI.getCharacterById(characterId);
+            
+            // 更新欢迎页标题
+            if (character) {
+              const welcomeTitle = document.querySelector('#welcome-page h2');
+              const welcomeText = document.querySelector('#welcome-page p');
+              if (welcomeTitle) welcomeTitle.textContent = `与 ${character.name} 的对话`;
+              if (welcomeText) welcomeText.textContent = `共 ${allConversations.length} 个对话记录`;
+            }
+          }
+        } else {
+          // 加载所有对话
+          if (window.electronAPI && window.electronAPI.getAllConversations) {
+            allConversations = await window.electronAPI.getAllConversations();
+          }
+        }
+
+        // 隐藏加载指示器
+        loadingIndicator.style.display = 'none';
+
+        if (allConversations.length === 0) {
+          conversationList.innerHTML = `
+            <div class="text-center py-8">
+              <p class="text-sm text-text-muted-light dark:text-text-muted-dark">还没有对话记录</p>
+            </div>
+          `;
+          return;
+        }
+
+        // 渲染对话列表
+        allConversations.forEach(conv => {
+          const item = document.createElement('div');
+          item.className = 'conversation-item flex items-center gap-3 px-3 py-2 rounded-full hover:bg-surface-light dark:hover:bg-surface-dark cursor-pointer';
+          item.dataset.conversationId = conv.id;
+
+          item.innerHTML = `
+            <div class="bg-center bg-no-repeat aspect-square bg-cover rounded-full size-8 shrink-0"
+                 style="background-color: ${conv.character_avatar_color || '#ff6b6b'};"></div>
+            <div class="flex-grow overflow-hidden">
+              <p class="text-text-light dark:text-text-dark text-sm font-medium leading-normal truncate">${conv.title || '无标题对话'}</p>
+              <p class="text-text-muted-light dark:text-text-muted-dark text-xs truncate">${conv.character_name || ''} · ${conv.message_count || 0} 条消息</p>
+            </div>
+          `;
+
+          item.addEventListener('click', () => {
+            selectConversation(conv.id);
+          });
+
+          conversationList.appendChild(item);
+        });
+
+        // 如果有指定的对话ID，打开该对话；否则自动选择第一个
+        if (conversationId) {
+          const targetConv = allConversations.find(c => c.id === conversationId);
+          if (targetConv) {
+            selectConversation(conversationId);
+          } else if (allConversations.length > 0) {
+            selectConversation(allConversations[0].id);
+          }
+        } else if (allConversations.length > 0) {
+          selectConversation(allConversations[0].id);
+        }
+      } catch (error) {
+        console.error('Failed to load conversations:', error);
+        document.getElementById('conversation-loading').innerHTML = '<p class="text-red-500 text-sm">加载失败：' + error.message + '</p>';
+      }
+    }
+
+    // 页面加载时初始化
+    document.addEventListener('DOMContentLoaded', () => {
+      console.log('Conversation editor loaded');
+      loadConversations();
+    });
+  </script>
 </body>
 </html>

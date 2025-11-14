@@ -22,6 +22,7 @@
     "electron-builder": "^25.1.8"
   },
   "dependencies": {
+    "better-sqlite3": "^12.4.1",
     "electron-store": "^8.2.0"
   },
   "build": {
