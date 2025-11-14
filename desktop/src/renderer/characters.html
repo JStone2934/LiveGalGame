@@ -31,7 +31,10 @@
   <style>
     body {
       font-family: 'Inter', 'Noto Sans SC', sans-serif;
+      margin: 0;
+      padding: 0;
     }
+
   </style>
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -87,21 +90,30 @@
         </div>
 
         <!-- 统计卡片 -->
-        <div class="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
+        <div class="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8" id="statistics-container">
           <div class="bg-white dark:bg-surface-dark rounded-xl p-6 border border-surface-light dark:border-surface-dark">
             <div class="flex items-center justify-between mb-2">
               <span class="text-text-muted-light dark:text-text-muted-dark text-sm">总计攻略对象</span>
               <span class="material-symbols-outlined text-primary">groups</span>
             </div>
-            <div class="text-2xl font-bold">3</div>
+            <div class="text-2xl font-bold" id="stat-character-count">-</div>
           </div>
 
           <div class="bg-white dark:bg-surface-dark rounded-xl p-6 border border-surface-light dark:border-surface-dark">
             <div class="flex items-center justify-between mb-2">
-              <span class="text-text-muted-light dark:text-text-muted-dark text-sm">活跃对话</span>
+              <div class="flex items-center gap-1">
+                <span class="text-text-muted-light dark:text-text-muted-dark text-sm">活跃对话</span>
+                <div class="relative group">
+                  <sup class="text-text-muted-light dark:text-text-muted-dark text-xs cursor-help" style="font-size: 10px; line-height: 0;">①</sup>
+                  <div class="absolute left-1/2 -translate-x-1/2 bottom-full mb-2 px-3 py-2 bg-gray-900 dark:bg-gray-700 text-white text-xs rounded-lg shadow-lg opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all duration-200 whitespace-nowrap z-10">
+                    显示两天内（48小时）创建的新对话数量
+                    <div class="absolute left-1/2 -translate-x-1/2 top-full w-0 h-0 border-l-4 border-r-4 border-t-4 border-transparent border-t-gray-900 dark:border-t-gray-700"></div>
+                  </div>
+                </div>
+              </div>
               <span class="material-symbols-outlined text-green-500">chat</span>
             </div>
-            <div class="text-2xl font-bold">5</div>
+            <div class="text-2xl font-bold" id="stat-active-conversations">-</div>
           </div>
 
           <div class="bg-white dark:bg-surface-dark rounded-xl p-6 border border-surface-light dark:border-surface-dark">
@@ -109,7 +121,7 @@
               <span class="text-text-muted-light dark:text-text-muted-dark text-sm">平均好感度</span>
               <span class="material-symbols-outlined text-yellow-500">favorite</span>
             </div>
-            <div class="text-2xl font-bold">68</div>
+            <div class="text-2xl font-bold" id="stat-avg-affinity">-</div>
           </div>
         </div>
 
@@ -125,6 +137,44 @@
     </main>
   </div>
 
+  <!-- 角色详情弹窗 -->
+  <div id="character-detail-modal" class="hidden fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm">
+    <div class="bg-surface-dark dark:bg-surface-light rounded-2xl p-6 max-w-2xl w-full mx-4 max-h-[90vh] overflow-y-auto shadow-2xl">
+      <!-- 弹窗头部 -->
+      <div class="flex items-center gap-4 mb-6">
+        <div class="w-12 h-12 rounded-full bg-primary/20 flex items-center justify-center">
+          <span class="material-symbols-outlined text-primary text-2xl">account_circle</span>
+        </div>
+        <div class="flex-1">
+          <h2 id="detail-modal-title" class="text-xl font-bold text-text-light dark:text-text-dark">查看详细信息</h2>
+          <p class="text-sm text-text-muted-light dark:text-text-muted-dark">角色档案与对话总结</p>
+        </div>
+        <button onclick="closeCharacterDetailModal()" class="p-2 rounded-full hover:bg-surface-light dark:hover:bg-surface-dark text-text-muted-light dark:text-text-muted-dark hover:text-text-light dark:hover:text-text-dark transition-colors">
+          <span class="material-symbols-outlined">close</span>
+        </button>
+      </div>
+
+      <!-- 弹窗内容 -->
+      <div id="detail-modal-content" class="space-y-6">
+        <!-- 加载中 -->
+        <div class="text-center py-8">
+          <div class="inline-block animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
+          <p class="mt-4 text-text-muted-light dark:text-text-muted-dark">加载中...</p>
+        </div>
+      </div>
+
+      <!-- 弹窗底部按钮 -->
+      <div class="mt-6 flex justify-end gap-3 pt-4 border-t border-surface-light dark:border-surface-dark">
+        <button onclick="regenerateCharacterDetails()" class="px-4 py-2 border border-surface-light dark:border-surface-dark rounded-lg text-sm hover:bg-surface-light dark:hover:bg-surface-dark transition-colors text-text-muted-light dark:text-text-muted-dark">
+          重新生成
+        </button>
+        <button onclick="closeCharacterDetailModal()" class="px-6 py-2 bg-primary text-white rounded-lg text-sm font-medium hover:bg-primary/90 transition-colors">
+          OK
+        </button>
+      </div>
+    </div>
+  </div>
+
   <script>
     // 查看角色的历史对话
     function viewCharacterHistory(characterId) {
@@ -133,12 +183,483 @@
       window.location.href = `./conversation-editor.html?character=${characterId}`;
     }
 
+    let currentDetailCharacterId = null;
+
     // 查看角色详情
-    function viewCharacterDetail(characterId) {
+    async function viewCharacterDetail(characterId) {
       console.log('Viewing detail for character:', characterId);
-      // 这里可以显示角色详情弹窗或跳转到详情页面
-      alert(`查看 ${characterId} 的详细信息\n\n这里可以显示：\n- 角色档案\n- 性格特点\n- 喜好厌恶\n- 重要事件\n- 对话总结`);
+      currentDetailCharacterId = characterId;
+      
+      // 显示弹窗
+      const modal = document.getElementById('character-detail-modal');
+      modal.classList.remove('hidden');
+      
+      // 获取角色信息
+      const character = await window.electronAPI.getCharacterById(characterId);
+      if (character) {
+        document.getElementById('detail-modal-title').textContent = `查看 ${character.name} 的详细信息`;
+      }
+      
+      // 加载角色详情
+      await loadCharacterDetails(characterId);
     }
+
+    // 关闭角色详情弹窗
+    function closeCharacterDetailModal() {
+      const modal = document.getElementById('character-detail-modal');
+      modal.classList.add('hidden');
+      currentDetailCharacterId = null;
+    }
+
+    // 加载角色详情
+    async function loadCharacterDetails(characterId) {
+      const content = document.getElementById('detail-modal-content');
+      content.innerHTML = `
+        <div class="text-center py-8">
+          <div class="inline-block animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
+          <p class="mt-4 text-text-muted-light dark:text-text-muted-dark">加载中...</p>
+        </div>
+      `;
+
+      try {
+        const details = await window.electronAPI.getCharacterDetails(characterId);
+        
+        if (!details) {
+          content.innerHTML = `
+            <div class="text-center py-8">
+              <p class="text-text-muted-light dark:text-text-muted-dark">无法加载角色详情</p>
+            </div>
+          `;
+          return;
+        }
+
+        renderCharacterDetails(details);
+      } catch (error) {
+        console.error('Failed to load character details:', error);
+        content.innerHTML = `
+          <div class="text-center py-8">
+            <p class="text-red-500">加载失败：${error.message}</p>
+          </div>
+        `;
+      }
+    }
+
+    // 渲染角色详情
+    function renderCharacterDetails(details) {
+      const content = document.getElementById('detail-modal-content');
+      
+      let html = '';
+
+      // 角色档案
+      if (details.profile) {
+        html += `
+          <div class="bg-surface-light dark:bg-surface-dark rounded-lg p-4">
+            <h3 class="text-lg font-semibold text-text-light dark:text-text-dark mb-3 flex items-center gap-2">
+              <span class="material-symbols-outlined text-primary">person</span>
+              角色档案
+            </h3>
+            <div class="space-y-2 text-sm">
+              ${details.profile.name ? `<p><span class="text-text-muted-light dark:text-text-muted-dark">姓名：</span><span class="text-text-light dark:text-text-dark font-medium">${details.profile.name}</span></p>` : ''}
+              ${details.profile.nickname ? `<p><span class="text-text-muted-light dark:text-text-muted-dark">昵称：</span><span class="text-text-light dark:text-text-dark font-medium">${details.profile.nickname}</span></p>` : ''}
+              ${details.profile.relationship_label ? `<p><span class="text-text-muted-light dark:text-text-muted-dark">关系：</span><span class="text-text-light dark:text-text-dark font-medium">${details.profile.relationship_label}</span></p>` : ''}
+              ${details.profile.affinity !== undefined ? `<p><span class="text-text-muted-light dark:text-text-muted-dark">好感度：</span><span class="text-text-light dark:text-text-dark font-medium">${details.profile.affinity}%</span></p>` : ''}
+              ${details.profile.tags && details.profile.tags.length > 0 ? `
+                <p class="flex items-center gap-2 flex-wrap">
+                  <span class="text-text-muted-light dark:text-text-muted-dark">标签：</span>
+                  ${details.profile.tags.map(tag => `<span class="px-2 py-1 bg-primary/10 text-primary text-xs rounded">${tag}</span>`).join('')}
+                </p>
+              ` : ''}
+              ${details.profile.notes ? `<p class="mt-2"><span class="text-text-muted-light dark:text-text-muted-dark">备注：</span><span class="text-text-light dark:text-text-dark">${details.profile.notes}</span></p>` : ''}
+            </div>
+          </div>
+        `;
+      }
+
+      // 性格特点
+      if (details.personality_traits) {
+        html += `
+          <div class="bg-surface-light dark:bg-surface-dark rounded-lg p-4">
+            <h3 class="text-lg font-semibold text-text-light dark:text-text-dark mb-3 flex items-center gap-2">
+              <span class="material-symbols-outlined text-primary">psychology</span>
+              性格特点
+            </h3>
+            ${details.personality_traits.keywords && details.personality_traits.keywords.length > 0 ? `
+              <div class="flex flex-wrap gap-2 mb-3">
+                ${details.personality_traits.keywords.map(keyword => `<span class="px-2 py-1 bg-primary/10 text-primary text-xs rounded">${keyword}</span>`).join('')}
+              </div>
+            ` : ''}
+            ${details.personality_traits.descriptions && details.personality_traits.descriptions.length > 0 ? `
+              <div class="space-y-1 text-sm text-text-muted-light dark:text-text-muted-dark">
+                ${details.personality_traits.descriptions.map(desc => `<p>• ${desc}</p>`).join('')}
+              </div>
+            ` : ''}
+          </div>
+        `;
+      }
+
+      // 喜好厌恶
+      if (details.likes_dislikes) {
+        html += `
+          <div class="bg-surface-light dark:bg-surface-dark rounded-lg p-4">
+            <h3 class="text-lg font-semibold text-text-light dark:text-text-dark mb-3 flex items-center gap-2">
+              <span class="material-symbols-outlined text-primary">favorite</span>
+              喜好厌恶
+            </h3>
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+              ${details.likes_dislikes.likes && details.likes_dislikes.likes.length > 0 ? `
+                <div>
+                  <p class="text-sm font-medium text-green-600 dark:text-green-400 mb-2">喜欢</p>
+                  <ul class="space-y-1 text-sm text-text-muted-light dark:text-text-muted-dark">
+                    ${details.likes_dislikes.likes.map(like => `<li class="flex items-start gap-2"><span class="text-green-500">✓</span><span>${like}</span></li>`).join('')}
+                  </ul>
+                </div>
+              ` : ''}
+              ${details.likes_dislikes.dislikes && details.likes_dislikes.dislikes.length > 0 ? `
+                <div>
+                  <p class="text-sm font-medium text-red-600 dark:text-red-400 mb-2">不喜欢</p>
+                  <ul class="space-y-1 text-sm text-text-muted-light dark:text-text-muted-dark">
+                    ${details.likes_dislikes.dislikes.map(dislike => `<li class="flex items-start gap-2"><span class="text-red-500">✗</span><span>${dislike}</span></li>`).join('')}
+                  </ul>
+                </div>
+              ` : ''}
+            </div>
+            ${(!details.likes_dislikes.likes || details.likes_dislikes.likes.length === 0) && 
+              (!details.likes_dislikes.dislikes || details.likes_dislikes.dislikes.length === 0) ? `
+              <p class="text-sm text-text-muted-light dark:text-text-muted-dark">暂无数据</p>
+            ` : ''}
+          </div>
+        `;
+      }
+
+      // 重要事件
+      if (details.important_events && details.important_events.length > 0) {
+        html += `
+          <div class="bg-surface-light dark:bg-surface-dark rounded-lg p-4">
+            <h3 class="text-lg font-semibold text-text-light dark:text-text-dark mb-3 flex items-center gap-2">
+              <span class="material-symbols-outlined text-primary">event</span>
+              重要事件
+            </h3>
+            <div class="space-y-3">
+              ${details.important_events.map(event => {
+                const date = new Date(event.date);
+                const dateStr = date.toLocaleDateString('zh-CN');
+                const affinityChange = event.affinity_change || 0;
+                const affinityColor = affinityChange > 0 ? 'text-green-500' : affinityChange < 0 ? 'text-red-500' : 'text-gray-500';
+                return `
+                  <div class="border-l-2 border-primary pl-3 pb-3">
+                    <div class="flex items-start justify-between mb-1">
+                      <p class="font-medium text-text-light dark:text-text-dark">${event.title}</p>
+                      <span class="text-xs text-text-muted-light dark:text-text-muted-dark">${dateStr}</span>
+                    </div>
+                    ${event.summary ? `<p class="text-sm text-text-muted-light dark:text-text-muted-dark mb-1">${event.summary}</p>` : ''}
+                    ${affinityChange !== 0 ? `<p class="text-xs ${affinityColor}">好感度${affinityChange > 0 ? '+' : ''}${affinityChange}</p>` : ''}
+                  </div>
+                `;
+              }).join('')}
+            </div>
+          </div>
+        `;
+      }
+
+      // 对话总结
+      if (details.conversation_summary) {
+        html += `
+          <div class="bg-surface-light dark:bg-surface-dark rounded-lg p-4">
+            <h3 class="text-lg font-semibold text-text-light dark:text-text-dark mb-3 flex items-center gap-2">
+              <span class="material-symbols-outlined text-primary">chat_bubble</span>
+              对话总结
+            </h3>
+            <p class="text-sm text-text-muted-light dark:text-text-muted-dark leading-relaxed">${details.conversation_summary}</p>
+          </div>
+        `;
+      }
+
+      // 自定义字段（始终显示，即使为空也可以添加）
+      html += `
+        <div class="bg-surface-light dark:bg-surface-dark rounded-lg p-4">
+          <div class="flex items-center justify-between mb-3">
+            <h3 class="text-lg font-semibold text-text-light dark:text-text-dark flex items-center gap-2">
+              <span class="material-symbols-outlined text-primary">tune</span>
+              自定义字段
+            </h3>
+            <button onclick="addCustomField()" class="flex items-center gap-1 px-3 py-1.5 text-sm bg-primary/10 text-primary rounded-lg hover:bg-primary/20 transition-colors">
+              <span class="material-symbols-outlined text-base">add</span>
+              添加字段
+            </button>
+          </div>
+          <div id="custom-fields-list" class="space-y-3">
+            ${details.custom_fields && Object.keys(details.custom_fields).length > 0 ? 
+              Object.entries(details.custom_fields).map(([key, value], index) => `
+                <div class="custom-field-item flex items-start gap-2 p-3 bg-background-light dark:bg-background-dark rounded-lg border border-surface-light dark:border-surface-dark">
+                  <div class="flex-1">
+                    <div class="flex items-center gap-2 mb-1">
+                      <span class="text-xs font-medium text-text-muted-light dark:text-text-muted-dark">字段名</span>
+                      <input type="text" value="${key}" 
+                             class="custom-field-key flex-1 px-2 py-1 text-sm border border-surface-light dark:border-surface-dark rounded bg-surface-light dark:bg-surface-dark text-text-light dark:text-text-dark focus:outline-none focus:ring-2 focus:ring-primary/50"
+                             data-original-key="${key}"
+                             onchange="updateCustomField('${key}', this.value, this.dataset.originalKey)" />
+                    </div>
+                    <div class="flex items-center gap-2">
+                      <span class="text-xs font-medium text-text-muted-light dark:text-text-muted-dark">值</span>
+                      <input type="text" value="${value}" 
+                             class="custom-field-value flex-1 px-2 py-1 text-sm border border-surface-light dark:border-surface-dark rounded bg-surface-light dark:bg-surface-dark text-text-light dark:text-text-dark focus:outline-none focus:ring-2 focus:ring-primary/50"
+                             data-field-key="${key}"
+                             onchange="updateCustomFieldValue('${key}', this.value)" />
+                    </div>
+                  </div>
+                  <button onclick="removeCustomField('${key}')" class="p-1.5 text-red-500 hover:bg-red-500/10 rounded transition-colors" title="删除字段">
+                    <span class="material-symbols-outlined text-lg">delete</span>
+                  </button>
+                </div>
+              `).join('') : 
+              '<p class="text-sm text-text-muted-light dark:text-text-muted-dark text-center py-4">暂无自定义字段，点击"添加字段"按钮添加</p>'
+            }
+          </div>
+        </div>
+      `;
+
+      // 如果没有数据
+      if (!html) {
+        html = `
+          <div class="text-center py-8">
+            <p class="text-text-muted-light dark:text-text-muted-dark">暂无详细信息</p>
+            <p class="text-sm text-text-muted-light dark:text-text-muted-dark mt-2">该角色还没有对话记录，无法生成详细信息</p>
+          </div>
+        `;
+      }
+
+      content.innerHTML = html;
+    }
+
+    // 重新生成角色详情
+    async function regenerateCharacterDetails() {
+      if (!currentDetailCharacterId) return;
+      
+      const content = document.getElementById('detail-modal-content');
+      content.innerHTML = `
+        <div class="text-center py-8">
+          <div class="inline-block animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
+          <p class="mt-4 text-text-muted-light dark:text-text-muted-dark">正在重新生成...</p>
+        </div>
+      `;
+
+      try {
+        const details = await window.electronAPI.regenerateCharacterDetails(currentDetailCharacterId);
+        if (details) {
+          renderCharacterDetails(details);
+        } else {
+          content.innerHTML = `
+            <div class="text-center py-8">
+              <p class="text-red-500">重新生成失败</p>
+            </div>
+          `;
+        }
+      } catch (error) {
+        console.error('Failed to regenerate character details:', error);
+        content.innerHTML = `
+          <div class="text-center py-8">
+            <p class="text-red-500">重新生成失败：${error.message}</p>
+          </div>
+        `;
+      }
+    }
+
+    // 添加自定义字段
+    function addCustomField() {
+      const fieldsList = document.getElementById('custom-fields-list');
+      if (!fieldsList) return;
+
+      // 生成临时ID
+      const tempId = 'temp_' + Date.now();
+      
+      const fieldHtml = `
+        <div class="custom-field-item flex items-start gap-2 p-3 bg-background-light dark:bg-background-dark rounded-lg border border-surface-light dark:border-surface-dark">
+          <div class="flex-1">
+            <div class="flex items-center gap-2 mb-1">
+              <span class="text-xs font-medium text-text-muted-light dark:text-text-muted-dark">字段名</span>
+              <input type="text" placeholder="输入字段名" 
+                     class="custom-field-key flex-1 px-2 py-1 text-sm border border-surface-light dark:border-surface-dark rounded bg-surface-light dark:bg-surface-dark text-text-light dark:text-text-dark focus:outline-none focus:ring-2 focus:ring-primary/50"
+                     data-original-key="${tempId}" />
+            </div>
+            <div class="flex items-center gap-2">
+              <span class="text-xs font-medium text-text-muted-light dark:text-text-muted-dark">值</span>
+              <input type="text" placeholder="输入字段值" 
+                     class="custom-field-value flex-1 px-2 py-1 text-sm border border-surface-light dark:border-surface-dark rounded bg-surface-light dark:bg-surface-dark text-text-light dark:text-text-dark focus:outline-none focus:ring-2 focus:ring-primary/50"
+                     data-field-key="${tempId}" />
+            </div>
+          </div>
+          <button onclick="removeCustomField('${tempId}')" class="p-1.5 text-red-500 hover:bg-red-500/10 rounded transition-colors" title="删除字段">
+            <span class="material-symbols-outlined text-lg">delete</span>
+          </button>
+        </div>
+      `;
+
+      // 如果当前显示的是"暂无字段"提示，替换它
+      if (fieldsList.innerHTML.includes('暂无自定义字段')) {
+        fieldsList.innerHTML = fieldHtml;
+      } else {
+        fieldsList.insertAdjacentHTML('beforeend', fieldHtml);
+      }
+
+      // 聚焦到新字段的字段名输入框
+      const newField = fieldsList.querySelector(`[data-original-key="${tempId}"]`);
+      if (newField) {
+        newField.focus();
+      }
+    }
+
+    // 更新自定义字段（重命名）
+    async function updateCustomField(oldKey, newKey, originalKey) {
+      if (!currentDetailCharacterId) return;
+      if (!newKey || newKey.trim() === '') {
+        // 如果是临时字段，允许为空（可以删除）
+        if (!originalKey.startsWith('temp_')) {
+          alert('字段名不能为空');
+          // 恢复原值
+          const input = document.querySelector(`[data-original-key="${originalKey}"]`);
+          if (input) input.value = oldKey;
+        }
+        return;
+      }
+
+      try {
+        // 获取当前详情
+        const details = await window.electronAPI.getCharacterDetails(currentDetailCharacterId);
+        if (!details) return;
+
+        const customFields = { ...(details.custom_fields || {}) };
+        
+        // 如果是临时字段，需要获取值
+        let fieldValue = '';
+        if (originalKey.startsWith('temp_')) {
+          const valueInput = document.querySelector(`[data-field-key="${originalKey}"]`);
+          fieldValue = valueInput ? valueInput.value : '';
+        } else {
+          fieldValue = customFields[oldKey] || '';
+        }
+        
+        // 如果新键名已存在且不是当前字段，提示错误
+        if (customFields[newKey] && newKey !== oldKey && !originalKey.startsWith('temp_')) {
+          alert('字段名已存在');
+          const input = document.querySelector(`[data-original-key="${originalKey}"]`);
+          if (input) input.value = oldKey;
+          return;
+        }
+
+        // 如果键名改变或是新字段，需要更新
+        if (newKey !== oldKey || originalKey.startsWith('temp_')) {
+          if (!originalKey.startsWith('temp_')) {
+            delete customFields[oldKey];
+          }
+          customFields[newKey] = fieldValue;
+        }
+
+        // 更新数据库
+        await window.electronAPI.updateCharacterDetailsCustomFields(currentDetailCharacterId, customFields);
+        
+        // 更新显示
+        const valueInput = document.querySelector(`[data-field-key="${originalKey}"]`);
+        if (valueInput) {
+          valueInput.dataset.fieldKey = newKey;
+        }
+        
+        // 更新originalKey
+        const keyInput = document.querySelector(`[data-original-key="${originalKey}"]`);
+        if (keyInput) {
+          keyInput.dataset.originalKey = newKey;
+        }
+        
+        // 如果是临时字段且值已输入，重新加载以更新显示
+        if (originalKey.startsWith('temp_') && fieldValue) {
+          await loadCharacterDetails(currentDetailCharacterId);
+        }
+      } catch (error) {
+        console.error('Failed to update custom field:', error);
+        alert('更新失败：' + error.message);
+      }
+    }
+
+    // 更新自定义字段值
+    async function updateCustomFieldValue(key, value) {
+      if (!currentDetailCharacterId) return;
+
+      try {
+        // 获取当前详情
+        const details = await window.electronAPI.getCharacterDetails(currentDetailCharacterId);
+        if (!details) return;
+
+        const customFields = {
+          ...(details.custom_fields || {})
+        };
+
+        // 如果是临时字段（temp_开头），需要先检查字段名是否已输入
+        if (key.startsWith('temp_')) {
+          const keyInput = document.querySelector(`[data-original-key="${key}"]`);
+          const fieldName = keyInput ? keyInput.value.trim() : '';
+          
+          if (!fieldName) {
+            // 字段名未输入，暂时不保存
+            return;
+          }
+          
+          // 使用字段名作为key
+          customFields[fieldName] = value;
+          
+          // 更新data属性
+          const valueInput = document.querySelector(`[data-field-key="${key}"]`);
+          if (valueInput) {
+            valueInput.dataset.fieldKey = fieldName;
+          }
+          if (keyInput) {
+            keyInput.dataset.originalKey = fieldName;
+          }
+        } else {
+          customFields[key] = value;
+        }
+
+        // 更新数据库
+        await window.electronAPI.updateCharacterDetailsCustomFields(currentDetailCharacterId, customFields);
+        
+        // 如果是临时字段，重新加载以更新显示
+        if (key.startsWith('temp_')) {
+          await loadCharacterDetails(currentDetailCharacterId);
+        }
+      } catch (error) {
+        console.error('Failed to update custom field value:', error);
+        alert('更新失败：' + error.message);
+      }
+    }
+
+    // 删除自定义字段
+    async function removeCustomField(key) {
+      if (!currentDetailCharacterId) return;
+      if (!confirm('确定要删除这个字段吗？')) return;
+
+      try {
+        // 获取当前详情
+        const details = await window.electronAPI.getCharacterDetails(currentDetailCharacterId);
+        if (!details || !details.custom_fields) return;
+
+        const customFields = { ...details.custom_fields };
+        delete customFields[key];
+
+        // 更新数据库
+        await window.electronAPI.updateCharacterDetailsCustomFields(currentDetailCharacterId, customFields);
+
+        // 重新加载详情以更新UI
+        await loadCharacterDetails(currentDetailCharacterId);
+      } catch (error) {
+        console.error('Failed to remove custom field:', error);
+        alert('删除失败：' + error.message);
+      }
+    }
+
+    // 点击弹窗外部关闭
+    document.getElementById('character-detail-modal')?.addEventListener('click', (e) => {
+      if (e.target.id === 'character-detail-modal') {
+        closeCharacterDetailModal();
+      }
+    });
 
     // 加载角色数据
     async function loadCharacters() {
@@ -258,9 +779,32 @@
       return 'bg-gradient-to-br from-primary to-[#8e24aa]';
     }
 
+    // 加载统计数据
+    async function loadStatistics() {
+      try {
+        if (window.electronAPI && window.electronAPI.getCharacterPageStatistics) {
+          const stats = await window.electronAPI.getCharacterPageStatistics();
+          document.getElementById('stat-character-count').textContent = stats.characterCount || 0;
+          document.getElementById('stat-active-conversations').textContent = stats.activeConversationCount || 0;
+          document.getElementById('stat-avg-affinity').textContent = stats.avgAffinity || 0;
+        } else {
+          console.error('Database API not available');
+          document.getElementById('stat-character-count').textContent = '0';
+          document.getElementById('stat-active-conversations').textContent = '0';
+          document.getElementById('stat-avg-affinity').textContent = '0';
+        }
+      } catch (error) {
+        console.error('Failed to load statistics:', error);
+        document.getElementById('stat-character-count').textContent = '0';
+        document.getElementById('stat-active-conversations').textContent = '0';
+        document.getElementById('stat-avg-affinity').textContent = '0';
+      }
+    }
+
     // 页面加载时初始化
     document.addEventListener('DOMContentLoaded', () => {
       console.log('Characters page loaded');
+      loadStatistics();
       loadCharacters();
     });
   </script>

@@ -81,6 +81,31 @@ CREATE TABLE IF NOT EXISTS ai_suggestions (
   FOREIGN KEY (message_id) REFERENCES messages(id) ON DELETE CASCADE
 );
 
+-- 角色详细信息表（从会话中总结）
+CREATE TABLE IF NOT EXISTS character_details (
+  character_id TEXT PRIMARY KEY,
+  profile TEXT, -- JSON格式：角色档案（基本信息、背景等）
+  personality_traits TEXT, -- JSON格式：性格特点（从对话中总结）
+  likes_dislikes TEXT, -- JSON格式：喜好厌恶（从对话中提取）
+  important_events TEXT, -- JSON格式：重要事件（从对话中提取）
+  conversation_summary TEXT, -- 对话总结
+  custom_fields TEXT, -- JSON格式：自定义字段（可扩展）
+  updated_at INTEGER NOT NULL,
+  FOREIGN KEY (character_id) REFERENCES characters(id) ON DELETE CASCADE
+);
+
+-- LLM配置表
+CREATE TABLE IF NOT EXISTS llm_configs (
+  id TEXT PRIMARY KEY,
+  name TEXT NOT NULL, -- 配置名称
+  provider TEXT NOT NULL DEFAULT 'openai', -- 提供商（openai等）
+  api_key TEXT NOT NULL, -- API密钥
+  base_url TEXT, -- API基础URL（可选，默认使用提供商的标准URL）
+  is_default INTEGER DEFAULT 0, -- 是否为默认配置
+  created_at INTEGER NOT NULL,
+  updated_at INTEGER NOT NULL
+);
+
 -- 索引优化
 CREATE INDEX IF NOT EXISTS idx_conversations_character_id ON conversations(character_id);
 CREATE INDEX IF NOT EXISTS idx_conversations_date ON conversations(date);
@@ -89,3 +114,5 @@ CREATE INDEX IF NOT EXISTS idx_messages_timestamp ON messages(timestamp);
 CREATE INDEX IF NOT EXISTS idx_character_tags_character_id ON character_tags(character_id);
 CREATE INDEX IF NOT EXISTS idx_ai_analysis_conversation_id ON ai_analysis(conversation_id);
 CREATE INDEX IF NOT EXISTS idx_ai_suggestions_conversation_id ON ai_suggestions(conversation_id);
+CREATE INDEX IF NOT EXISTS idx_character_details_character_id ON character_details(character_id);
+CREATE INDEX IF NOT EXISTS idx_llm_configs_is_default ON llm_configs(is_default);

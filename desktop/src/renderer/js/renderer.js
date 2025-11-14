@@ -67,8 +67,6 @@ function setupNavigation() {
       // 显示即将推出的提示
       if (page === 'characters') {
         alert('攻略对象管理功能即将推出！');
-      } else if (page === 'llm') {
-        alert('LLM配置功能即将推出！');
       } else if (page === 'settings') {
         alert('设置功能即将推出！');
       }
@@ -336,7 +334,7 @@ function updateAIInsights(conversationId) {
     `).join('');
 
     container.innerHTML = `
-      <h3 class="block text-base font-semibold text-text-light dark:text-text-dark mb-3">AI 洞察</h3>
+      <h3 class="block text-base font-semibold text-text-light dark:text-text-dark mb-3">复盘分析</h3>
       <div class="flex flex-col gap-2 text-sm p-4 rounded-lg bg-surface-light dark:bg-surface-dark">
         ${insightsHTML}
       </div>

@@ -23,7 +23,8 @@
   },
   "dependencies": {
     "better-sqlite3": "^12.4.1",
-    "electron-store": "^8.2.0"
+    "electron-store": "^8.2.0",
+    "openai": "^6.9.0"
   },
   "build": {
     "appId": "com.livegalgame.desktop",

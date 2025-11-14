@@ -14,6 +14,30 @@
       min-height: 100vh;
     }
 
+    .back-link:hover {
+      gap: 12px;
+    }
+
+    .error-message {
+      background: rgba(239, 68, 68, 0.1);
+      border: 1px solid rgba(239, 68, 68, 0.2);
+      color: #ef4444;
+      padding: 12px;
+      border-radius: 8px;
+      margin-top: 12px;
+      font-size: 14px;
+    }
+
+    .success-message {
+      background: rgba(34, 197, 94, 0.1);
+      border: 1px solid rgba(34, 197, 94, 0.2);
+      color: #22c55e;
+      padding: 12px;
+      border-radius: 8px;
+      margin-top: 12px;
+      font-size: 14px;
+    }
+
     .dark body {
       background: linear-gradient(135deg, #1a0a12 0%, #0d0510 100%);
     }
@@ -192,7 +216,7 @@
 </head>
 <body>
   <div class="container">
-    <a href="index.html" class="back-link">
+    <a href="./index.html" class="back-link">
       ← 返回
     </a>
 
@@ -238,25 +262,46 @@
       </div>
     </div>
 
-    <!-- API设置 -->
+    <!-- LLM配置 -->
     <div class="card">
       <div class="section-title">
-        🔑 API配置
+        🤖 LLM配置
+      </div>
+
+      <div style="margin-bottom: 16px;">
+        <label style="display: block; font-weight: 500; margin-bottom: 8px; color: #333;">配置名称</label>
+        <input type="text" id="llm-config-name" style="width: 100%; padding: 12px; border: 1px solid #ddd; border-radius: 8px; font-size: 14px;" placeholder="默认配置">
+      </div>
+
+      <div style="margin-bottom: 16px;">
+        <label style="display: block; font-weight: 500; margin-bottom: 8px; color: #333;">提供商</label>
+        <select id="llm-provider" style="width: 100%; padding: 12px; border: 1px solid #ddd; border-radius: 8px; font-size: 14px;">
+          <option value="openai">OpenAI</option>
+        </select>
       </div>
 
       <div style="margin-bottom: 16px;">
         <label style="display: block; font-weight: 500; margin-bottom: 8px; color: #333;">API Key</label>
-        <input type="password" style="width: 100%; padding: 12px; border: 1px solid #ddd; border-radius: 8px; font-size: 14px;" placeholder="输入你的API密钥">
+        <input type="password" id="llm-api-key" style="width: 100%; padding: 12px; border: 1px solid #ddd; border-radius: 8px; font-size: 14px;" placeholder="输入你的API密钥">
       </div>
 
       <div style="margin-bottom: 16px;">
-        <label style="display: block; font-weight: 500; margin-bottom: 8px; color: #333;">API Endpoint</label>
-        <input type="text" style="width: 100%; padding: 12px; border: 1px solid #ddd; border-radius: 8px; font-size: 14px;" placeholder="https://api.example.com/v1">
+        <label style="display: block; font-weight: 500; margin-bottom: 8px; color: #333;">API Base URL <span style="font-weight: normal; color: #666;">(可选)</span></label>
+        <input type="text" id="llm-base-url" style="width: 100%; padding: 12px; border: 1px solid #ddd; border-radius: 8px; font-size: 14px;" placeholder="https://api.openai.com/v1 (留空使用默认)">
       </div>
 
+      <div style="margin-bottom: 16px;">
+        <label style="display: flex; align-items: center; gap: 8px; cursor: pointer;">
+          <input type="checkbox" id="llm-is-default" style="width: 18px; height: 18px; cursor: pointer;">
+          <span style="font-weight: 500; color: #333;">设为默认配置</span>
+        </label>
+      </div>
+
+      <div id="llm-message"></div>
+
       <div style="display: flex; gap: 12px;">
-        <button class="btn btn-primary">保存配置</button>
-        <button class="btn btn-secondary">测试连接</button>
+        <button class="btn btn-primary" id="llm-save-btn">保存配置</button>
+        <button class="btn btn-secondary" id="llm-test-btn">测试连接</button>
       </div>
     </div>
   </div>
@@ -284,6 +329,7 @@
     // 初始化
     document.addEventListener('DOMContentLoaded', () => {
       checkMicrophonePermission();
+      loadLLMConfig();
     });
 
     // 检查麦克风权限
@@ -538,6 +584,128 @@
     // 页面卸载时停止音频测试
     window.addEventListener('beforeunload', () => {
       stopAudioTest();
+    });
+
+    // ========== LLM配置相关 ==========
+    const llmConfigName = document.getElementById('llm-config-name');
+    const llmProvider = document.getElementById('llm-provider');
+    const llmApiKey = document.getElementById('llm-api-key');
+    const llmBaseUrl = document.getElementById('llm-base-url');
+    const llmIsDefault = document.getElementById('llm-is-default');
+    const llmSaveBtn = document.getElementById('llm-save-btn');
+    const llmTestBtn = document.getElementById('llm-test-btn');
+    const llmMessage = document.getElementById('llm-message');
+
+    let currentLLMConfig = null;
+
+    // 加载LLM配置
+    async function loadLLMConfig() {
+      try {
+        if (window.electronAPI && window.electronAPI.getDefaultLLMConfig) {
+          const config = await window.electronAPI.getDefaultLLMConfig();
+          if (config) {
+            currentLLMConfig = config;
+            llmConfigName.value = config.name || '';
+            llmProvider.value = config.provider || 'openai';
+            llmApiKey.value = config.api_key || '';
+            llmBaseUrl.value = config.base_url || '';
+            llmIsDefault.checked = config.is_default === 1;
+          }
+        }
+      } catch (error) {
+        console.error('Failed to load LLM config:', error);
+      }
+    }
+
+    // 显示消息
+    function showLLMMessage(type, message) {
+      llmMessage.innerHTML = '';
+      const messageDiv = document.createElement('div');
+      messageDiv.className = type === 'error' ? 'error-message' : 'success-message';
+      messageDiv.textContent = message;
+      llmMessage.appendChild(messageDiv);
+
+      setTimeout(() => {
+        messageDiv.remove();
+      }, 5000);
+    }
+
+    // 保存LLM配置
+    llmSaveBtn.addEventListener('click', async () => {
+      try {
+        const apiKey = llmApiKey.value.trim();
+        if (!apiKey) {
+          showLLMMessage('error', '请输入API Key');
+          return;
+        }
+
+        llmSaveBtn.disabled = true;
+        llmSaveBtn.textContent = '保存中...';
+
+        const configData = {
+          id: currentLLMConfig?.id,
+          name: llmConfigName.value.trim() || '默认配置',
+          provider: llmProvider.value,
+          api_key: apiKey,
+          base_url: llmBaseUrl.value.trim() || null,
+          is_default: llmIsDefault.checked ? 1 : 0
+        };
+
+        const savedConfig = await window.electronAPI.saveLLMConfig(configData);
+        currentLLMConfig = savedConfig;
+
+        showLLMMessage('success', '配置已保存');
+        llmSaveBtn.textContent = '保存配置';
+        llmSaveBtn.disabled = false;
+      } catch (error) {
+        console.error('Failed to save LLM config:', error);
+        showLLMMessage('error', '保存失败：' + (error.message || '未知错误'));
+        llmSaveBtn.textContent = '保存配置';
+        llmSaveBtn.disabled = false;
+      }
+    });
+
+    // 测试LLM连接
+    llmTestBtn.addEventListener('click', async () => {
+      try {
+        const apiKey = llmApiKey.value.trim();
+        if (!apiKey) {
+          showLLMMessage('error', '请输入API Key');
+          return;
+        }
+
+        llmTestBtn.disabled = true;
+        llmTestBtn.textContent = '测试中...';
+
+        const configData = {
+          provider: llmProvider.value,
+          api_key: apiKey,
+          base_url: llmBaseUrl.value.trim() || null
+        };
+
+        const result = await window.electronAPI.testLLMConnection(configData);
+
+        if (result.success) {
+          showLLMMessage('success', result.message || '连接成功！');
+        } else {
+          showLLMMessage('error', result.message || '连接失败');
+        }
+
+        llmTestBtn.textContent = '测试连接';
+        llmTestBtn.disabled = false;
+      } catch (error) {
+        console.error('Failed to test LLM connection:', error);
+        showLLMMessage('error', '测试失败：' + (error.message || '未知错误'));
+        llmTestBtn.textContent = '测试连接';
+        llmTestBtn.disabled = false;
+      }
+    });
+
+
+    // 页面加载时初始化
+    document.addEventListener('DOMContentLoaded', () => {
+      checkMicrophonePermission();
+      loadLLMConfig();
     });
 
     console.log('Settings page loaded');

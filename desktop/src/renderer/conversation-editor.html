@@ -65,7 +65,7 @@
 
           <!-- 搜索框 -->
           <div class="relative px-2">
-            <input class="w-full h-9 px-4 pl-10 text-sm rounded-full border-none bg-surface-light dark:bg-surface-dark
+            <input id="search-input" class="w-full h-9 px-4 pl-10 text-sm rounded-full border-none bg-surface-light dark:bg-surface-dark
                    focus:ring-2 focus:ring-primary/50 text-text-light dark:text-text-dark
                    placeholder:text-text-muted-light dark:placeholder:text-text-muted-dark"
                    placeholder="搜索对话..." type="text"/>
@@ -93,10 +93,6 @@
             <div class="flex items-center gap-3 px-3 py-2 rounded-full hover:bg-surface-light dark:hover:bg-surface-dark cursor-pointer">
               <span class="material-symbols-outlined text-text-light dark:text-text-dark text-2xl">settings</span>
               <p class="text-text-light dark:text-text-dark text-sm font-medium leading-normal">设置</p>
-            </div>
-            <div class="flex items-center gap-3 px-3 py-2 rounded-full hover:bg-surface-light dark:hover:bg-surface-dark cursor-pointer">
-              <span class="material-symbols-outlined text-text-light dark:text-text-dark text-2xl">help_center</span>
-              <p class="text-text-light dark:text-text-dark text-sm font-medium leading-normal">帮助</p>
             </div>
           </div>
         </div>
@@ -150,17 +146,16 @@
           </div>
         </header>
 
-        <div class="conversation-messages flex-1 overflow-y-auto p-4 md:p-6 space-y-6">
-          <!-- 消息内容将通过JavaScript动态加载 -->
-        </div>
+        <div class="conversation-messages flex-1 overflow-y-auto p-4 md:p-6">
+          <!-- AI分析报告区域 -->
+          <div id="ai-analysis-section" class="space-y-4 mb-6">
+            <!-- 内容将通过JavaScript动态加载 -->
+          </div>
 
-        <div class="flex justify-center py-4">
-          <button class="btn-add-message flex items-center gap-2 px-4 py-2 text-sm font-bold rounded-full border border-dashed
-                         border-text-muted-light dark:border-text-muted-dark text-text-muted-light dark:text-text-muted-dark
-                         hover:bg-surface-light dark:hover:bg-surface-dark hover:border-solid hover:text-text-light dark:hover:text-text-dark">
-            <span class="material-symbols-outlined text-lg">add</span>
-            添加消息
-          </button>
+          <!-- 消息内容区域 -->
+          <div class="space-y-6">
+            <!-- 消息内容将通过JavaScript动态加载 -->
+          </div>
         </div>
       </div>
     </main>
@@ -168,11 +163,11 @@
     <!-- 右侧AI分析面板 -->
     <aside class="w-80 flex-shrink-0 border-l border-surface-light dark:border-surface-dark/40 bg-background-light dark:bg-background-dark" id="ai-panel">
       <div class="p-6">
-        <h2 class="text-lg font-bold text-text-light dark:text-text-dark mb-6">AI 分析与编辑</h2>
+        <h2 class="text-lg font-bold text-text-light dark:text-text-dark mb-6">对话总览</h2>
         <div class="space-y-6">
-          <!-- AI洞察 -->
+          <!-- 复盘分析 -->
           <div id="ai-insights">
-            <h3 class="block text-base font-semibold text-text-light dark:text-text-dark mb-3">AI 洞察</h3>
+            <h3 class="block text-base font-semibold text-text-light dark:text-text-dark mb-3">复盘分析</h3>
             <div class="flex flex-col gap-2 text-sm p-4 rounded-lg bg-surface-light dark:bg-surface-dark">
               <div class="insight-item flex items-start gap-2.5">
                 <span class="material-symbols-outlined text-lg text-yellow-600 dark:text-yellow-400 mt-0.5">auto_awesome</span>
@@ -186,22 +181,6 @@
                   建议：继续保持主动，可以提出一个具体的见面地点，展现你的体贴。
                 </p>
               </div>
-            </div>
-          </div>
-
-          <!-- 编辑消息 -->
-          <div id="message-editor">
-            <label class="block text-sm font-medium text-text-muted-light dark:text-text-muted-dark mb-2" for="message-content">
-              编辑消息
-            </label>
-            <textarea class="w-full rounded border-surface-light dark:border-surface-dark bg-transparent
-                           focus:ring-primary focus:border-primary text-text-light dark:text-text-dark
-                           px-3 py-2 text-sm" id="message-content" rows="3"
-                      placeholder="选择一条消息进行编辑..."></textarea>
-            <div class="flex justify-end mt-2">
-              <button class="px-3 py-1 text-xs bg-primary text-white rounded-full" id="btn-update-message">
-                更新
-              </button>
             </div>
           </div>
 
@@ -260,6 +239,105 @@
   <script>
     let currentCharacterId = null;
     let allConversations = [];
+    let filteredConversations = [];
+
+    // 调整颜色亮度
+    function adjustColorBrightness(hex, percent) {
+      // 移除 # 号
+      hex = hex.replace('#', '');
+      
+      // 转换为 RGB
+      const r = parseInt(hex.substr(0, 2), 16);
+      const g = parseInt(hex.substr(2, 2), 16);
+      const b = parseInt(hex.substr(4, 2), 16);
+      
+      // 调整亮度
+      const newR = Math.min(255, Math.round(r + (255 - r) * percent));
+      const newG = Math.min(255, Math.round(g + (255 - g) * percent));
+      const newB = Math.min(255, Math.round(b + (255 - b) * percent));
+      
+      // 转换回十六进制
+      return `#${newR.toString(16).padStart(2, '0')}${newG.toString(16).padStart(2, '0')}${newB.toString(16).padStart(2, '0')}`;
+    }
+
+    // 获取对比色（用于文字颜色）
+    function getContrastColor(hex) {
+      // 移除 # 号
+      hex = hex.replace('#', '');
+      
+      // 转换为 RGB
+      const r = parseInt(hex.substr(0, 2), 16);
+      const g = parseInt(hex.substr(2, 2), 16);
+      const b = parseInt(hex.substr(4, 2), 16);
+      
+      // 计算亮度
+      const brightness = (r * 299 + g * 587 + b * 114) / 1000;
+      
+      // 检查是否为暗色模式
+      const isDarkMode = document.documentElement.classList.contains('dark');
+      
+      // 如果背景较亮，返回深色文字；否则返回浅色文字
+      // 在暗色模式下，使用更柔和的对比
+      if (isDarkMode) {
+        return brightness > 100 ? '#1b0e14' : '#f8f6f7';
+      } else {
+        return brightness > 180 ? '#1b0e14' : '#f8f6f7';
+      }
+    }
+
+    // 格式化日期显示
+    function formatDate(timestamp) {
+      if (!timestamp) return '';
+      const date = new Date(timestamp);
+      const now = new Date();
+      const diffMs = now - date;
+      const diffDays = Math.floor(diffMs / (1000 * 60 * 60 * 24));
+      const diffHours = Math.floor(diffMs / (1000 * 60 * 60));
+      const diffMinutes = Math.floor(diffMs / (1000 * 60));
+      
+      // 两天内显示小时级别
+      if (diffDays < 2) {
+        if (diffMinutes < 60) {
+          return diffMinutes < 1 ? '刚刚' : `${diffMinutes}分钟前`;
+        } else if (diffHours < 24) {
+          return `${diffHours}小时前`;
+        } else if (diffDays === 1) {
+          // 昨天，显示具体时间
+          const hours = date.getHours().toString().padStart(2, '0');
+          const minutes = date.getMinutes().toString().padStart(2, '0');
+          return `昨天 ${hours}:${minutes}`;
+        } else {
+          // 小于2天但大于1天，显示小时
+          return `${diffHours}小时前`;
+        }
+      } else if (diffDays < 7) {
+        return `${diffDays}天前`;
+      } else if (diffDays < 30) {
+        const weeks = Math.floor(diffDays / 7);
+        return `${weeks}周前`;
+      } else if (diffDays < 365) {
+        const months = Math.floor(diffDays / 30);
+        return `${months}个月前`;
+      } else {
+        const years = Math.floor(diffDays / 365);
+        return `${years}年前`;
+      }
+    }
+
+    // 搜索对话
+    function filterConversations(searchTerm) {
+      if (!searchTerm || searchTerm.trim() === '') {
+        filteredConversations = [...allConversations];
+      } else {
+        const term = searchTerm.toLowerCase().trim();
+        filteredConversations = allConversations.filter(conv => {
+          const title = (conv.title || '').toLowerCase();
+          const characterName = (conv.character_name || '').toLowerCase();
+          return title.includes(term) || characterName.includes(term);
+        });
+      }
+      renderConversationList();
+    }
 
     // 从URL获取参数
     function getURLParams() {
@@ -291,8 +369,30 @@
             // 更新对话头部
             updateConversationHeader(conversation);
             
-            // 渲染消息
-            renderMessages(messages);
+            // 加载AI分析数据
+            if (window.electronAPI && window.electronAPI.getConversationAIData) {
+              try {
+                const aiData = await window.electronAPI.getConversationAIData(conversationId);
+                console.log('AI Data loaded:', aiData);
+                console.log('Analysis Report:', aiData.analysisReport);
+                console.log('Key Moments:', aiData.keyMoments);
+                console.log('Attitude Analysis:', aiData.attitudeAnalysis);
+                console.log('Action Suggestions:', aiData.actionSuggestions);
+                renderAIAnalysis(aiData, conversation);
+              } catch (error) {
+                console.error('Failed to load AI data:', error);
+                // 即使加载失败也渲染空状态
+                renderAIAnalysis({
+                  analysisReport: null,
+                  keyMoments: [],
+                  attitudeAnalysis: null,
+                  actionSuggestions: []
+                }, conversation);
+              }
+            }
+            
+            // 渲染消息，传递角色信息
+            renderMessages(messages, conversation);
           } else {
             console.error('Conversation not found:', conversationId);
           }
@@ -345,10 +445,273 @@
       }
     }
 
+    // 生成角色颜色（确保颜色错开）
+    function getCharacterColor(characterId, avatarColor) {
+      // 如果已有头像颜色，使用它
+      if (avatarColor) {
+        return avatarColor;
+      }
+      
+      // 否则根据角色ID生成一个颜色
+      const colors = [
+        '#ff6b6b', // 红色
+        '#4ecdc4', // 青色
+        '#ffe66d', // 黄色
+        '#a8e6cf', // 浅绿色
+        '#ff8b94', // 粉红色
+        '#95e1d3', // 薄荷绿
+        '#f38181', // 珊瑚红
+        '#aa96da', // 紫色
+        '#fcbad3', // 淡粉色
+        '#a8d8ea', // 天蓝色
+      ];
+      
+      // 根据角色ID的hash值选择颜色
+      let hash = 0;
+      for (let i = 0; i < characterId.length; i++) {
+        hash = characterId.charCodeAt(i) + ((hash << 5) - hash);
+      }
+      const index = Math.abs(hash) % colors.length;
+      return colors[index];
+    }
+
+    // 渲染AI分析数据
+    function renderAIAnalysis(aiData, conversation) {
+      const container = document.getElementById('ai-analysis-section');
+      if (!container) {
+        console.error('AI analysis section container not found!');
+        return;
+      }
+
+      console.log('Rendering AI analysis:', {
+        hasReport: !!aiData.analysisReport,
+        reportKeys: aiData.analysisReport ? Object.keys(aiData.analysisReport) : [],
+        keyMomentsCount: aiData.keyMoments?.length || 0,
+        hasAttitudeAnalysis: !!aiData.attitudeAnalysis,
+        suggestionsCount: aiData.actionSuggestions?.length || 0
+      });
+
+      let html = '';
+
+      // AI分析报告
+      if (aiData.analysisReport) {
+        const report = aiData.analysisReport;
+        html += `
+          <details class="group bg-surface-light dark:bg-surface-dark rounded-lg overflow-hidden" open>
+            <summary class="flex items-center justify-between p-4 cursor-pointer">
+              <div class="flex items-center gap-3">
+                <span class="material-symbols-outlined text-2xl text-primary">auto_awesome</span>
+                <h3 class="font-semibold text-text-light dark:text-text-dark">AI分析报告</h3>
+              </div>
+              <span class="material-symbols-outlined text-text-muted-light dark:text-text-muted-dark transition-transform duration-300 group-open:rotate-180">expand_more</span>
+            </summary>
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-4 p-4 border-t border-surface-light/50 dark:border-surface-dark/50">
+              ${report.expressionAbility ? `
+                <div class="bg-background-light dark:bg-background-dark p-4 rounded-lg space-y-3">
+                  <div class="flex justify-between items-center">
+                    <p class="text-sm font-medium text-text-muted-light dark:text-text-muted-dark">表达能力</p>
+                    <p class="text-lg font-bold text-primary">${report.expressionAbility.score || 0}<span class="text-xs">分</span></p>
+                  </div>
+                  <div class="flex items-center gap-0.5">
+                    ${renderStars(report.expressionAbility.score || 0)}
+                  </div>
+                  <p class="text-xs text-text-muted-light dark:text-text-muted-dark">${report.expressionAbility.description || '清晰流畅'}</p>
+                </div>
+              ` : ''}
+              ${report.topicSelection ? `
+                <div class="bg-background-light dark:bg-background-dark p-4 rounded-lg space-y-3">
+                  <div class="flex justify-between items-center">
+                    <p class="text-sm font-medium text-text-muted-light dark:text-text-muted-dark">话题选择</p>
+                    <p class="text-lg font-bold text-primary">${report.topicSelection.score || 0}<span class="text-xs">分</span></p>
+                  </div>
+                  <div class="flex items-center gap-0.5">
+                    ${renderStars(report.topicSelection.score || 0)}
+                  </div>
+                  <p class="text-xs text-text-muted-light dark:text-text-muted-dark">${report.topicSelection.description || '非常契合'}</p>
+                </div>
+              ` : ''}
+            </div>
+          </details>
+        `;
+      }
+
+      // 关键时刻回放
+      if (aiData.keyMoments && aiData.keyMoments.length > 0) {
+        html += `
+          <details class="group bg-surface-light dark:bg-surface-dark rounded-lg overflow-hidden">
+            <summary class="flex items-center justify-between p-4 cursor-pointer">
+              <div class="flex items-center gap-3">
+                <span class="material-symbols-outlined text-2xl text-primary">history_toggle_off</span>
+                <h3 class="font-semibold text-text-light dark:text-text-dark">关键时刻回放</h3>
+              </div>
+              <span class="material-symbols-outlined text-text-muted-light dark:text-text-muted-dark transition-transform duration-300 group-open:rotate-180">expand_more</span>
+            </summary>
+            <div class="p-4 border-t border-surface-light/50 dark:border-surface-dark/50 space-y-4">
+              ${aiData.keyMoments.map(km => {
+                const timeStr = formatTimeFromTimestamp(km.timestamp);
+                const senderName = km.sender === 'user' ? '我' : (conversation.character_name || '对方');
+                return `
+                  <div class="relative">
+                    <div class="absolute left-4 top-0 bottom-0 w-0.5 bg-primary/20"></div>
+                    <div class="relative pl-8">
+                      <div class="absolute -left-1.5 top-1 flex size-3 rounded-full bg-primary ring-4 ring-background-light dark:ring-background-dark"></div>
+                      <p class="text-xs font-semibold text-primary mb-1">${timeStr}</p>
+                      <p class="text-sm text-text-muted-light dark:text-text-muted-dark">${senderName}："${km.messageContent || ''}"</p>
+                      ${km.evaluation ? `
+                        <div class="mt-2 p-3 rounded-lg bg-primary/10 border border-primary/20">
+                          <p class="text-sm text-text-light dark:text-text-dark"><span class="font-bold text-primary">AI评价:</span> ${km.evaluation.content || km.evaluation}</p>
+                        </div>
+                      ` : ''}
+                    </div>
+                  </div>
+                `;
+              }).join('')}
+            </div>
+          </details>
+        `;
+      }
+
+      // 本轮对话表现态度分析
+      if (aiData.attitudeAnalysis) {
+        const attitude = aiData.attitudeAnalysis;
+        const affinityChange = attitude.affinityChange || 0;
+        const trend = attitude.trend || (affinityChange > 0 ? '上升' : affinityChange < 0 ? '下降' : '持平');
+        const trendColor = affinityChange > 0 ? 'text-green-500' : affinityChange < 0 ? 'text-red-500' : 'text-gray-500';
+        const trendIcon = affinityChange > 0 ? 'trending_up' : affinityChange < 0 ? 'trending_down' : 'trending_flat';
+        
+        html += `
+          <details class="group bg-surface-light dark:bg-surface-dark rounded-lg overflow-hidden">
+            <summary class="flex items-center justify-between p-4 cursor-pointer">
+              <div class="flex items-center gap-3">
+                <span class="material-symbols-outlined text-2xl text-primary">psychology</span>
+                <h3 class="font-semibold text-text-light dark:text-text-dark">本轮对话表现态度分析</h3>
+              </div>
+              <span class="material-symbols-outlined text-text-muted-light dark:text-text-muted-dark transition-transform duration-300 group-open:rotate-180">expand_more</span>
+            </summary>
+            <div class="p-4 border-t border-surface-light/50 dark:border-surface-dark/50 space-y-3">
+              <p class="text-sm text-text-muted-light dark:text-text-muted-dark">${attitude.description || '本轮对话中，对方表现积极，互动良好。'}</p>
+              <div class="flex items-center gap-2 pt-2 border-t border-surface-light/50 dark:border-surface-dark/50">
+                <span class="material-symbols-outlined ${trendColor}">${trendIcon}</span>
+                <span class="text-sm font-medium ${trendColor}">好感度${trend}</span>
+                ${affinityChange !== 0 ? `<span class="text-sm ${trendColor}">(${affinityChange > 0 ? '+' : ''}${affinityChange})</span>` : ''}
+              </div>
+            </div>
+          </details>
+        `;
+      }
+
+      // 行动建议
+      if (aiData.actionSuggestions && aiData.actionSuggestions.length > 0) {
+        // 更灵活的过滤逻辑
+        const tryTopics = aiData.actionSuggestions.filter(s => {
+          const title = (s.title || '').toLowerCase();
+          const content = (s.content || '').toLowerCase();
+          const tags = s.tags || [];
+          return title.includes('可以尝试') || title.includes('建议') || 
+                 content.includes('可以尝试') || content.includes('建议') ||
+                 tags.some(t => t.includes('可以尝试') || t.includes('建议'));
+        });
+        
+        const avoidTopics = aiData.actionSuggestions.filter(s => {
+          const title = (s.title || '').toLowerCase();
+          const content = (s.content || '').toLowerCase();
+          const tags = s.tags || [];
+          return title.includes('避开') || title.includes('避免') ||
+                 content.includes('避开') || content.includes('避免') ||
+                 tags.some(t => t.includes('避开') || t.includes('避免'));
+        });
+        
+        // 如果没有明确分类，显示所有建议
+        const allSuggestions = tryTopics.length === 0 && avoidTopics.length === 0 
+          ? aiData.actionSuggestions 
+          : [];
+        
+        if (tryTopics.length > 0 || avoidTopics.length > 0 || allSuggestions.length > 0) {
+          html += `
+            <details class="group bg-surface-light dark:bg-surface-dark rounded-lg overflow-hidden">
+              <summary class="flex items-center justify-between p-4 cursor-pointer">
+                <div class="flex items-center gap-3">
+                  <span class="material-symbols-outlined text-2xl text-primary">lightbulb</span>
+                  <h3 class="font-semibold text-text-light dark:text-text-dark">行动建议</h3>
+                </div>
+                <span class="material-symbols-outlined text-text-muted-light dark:text-text-muted-dark transition-transform duration-300 group-open:rotate-180">expand_more</span>
+              </summary>
+              <div class="p-4 border-t border-surface-light/50 dark:border-surface-dark/50">
+                <ul class="space-y-3 text-sm text-text-muted-light dark:text-text-muted-dark">
+                  ${tryTopics.map(s => `
+                    <li class="flex items-start gap-3">
+                      <span class="material-symbols-outlined text-lg text-green-500 flex-shrink-0 mt-0.5">check_circle</span>
+                      <span class="flex-1 leading-relaxed">可以尝试的话题：${s.content || s.title}</span>
+                    </li>
+                  `).join('')}
+                  ${avoidTopics.map(s => `
+                    <li class="flex items-start gap-3">
+                      <span class="material-symbols-outlined text-lg text-red-500 flex-shrink-0 mt-0.5">cancel</span>
+                      <span class="flex-1 leading-relaxed">避开的话题：${s.content || s.title}</span>
+                    </li>
+                  `).join('')}
+                  ${allSuggestions.map(s => `
+                    <li class="flex items-start gap-3">
+                      <span class="material-symbols-outlined text-lg text-blue-500 flex-shrink-0 mt-0.5">lightbulb</span>
+                      <span class="flex-1 leading-relaxed">${s.title || '建议'}：${s.content || ''}</span>
+                    </li>
+                  `).join('')}
+                </ul>
+              </div>
+            </details>
+          `;
+        }
+      }
+
+      // 如果没有AI分析报告但有其他数据，至少显示一个提示
+      if (!html && (aiData.attitudeAnalysis || aiData.keyMoments?.length > 0 || aiData.actionSuggestions?.length > 0)) {
+        html = '<p class="text-sm text-text-muted-light dark:text-text-muted-dark text-center py-4">AI分析报告数据暂未生成</p>';
+      }
+
+      container.innerHTML = html || '<p class="text-sm text-text-muted-light dark:text-text-muted-dark text-center py-4">暂无AI分析数据</p>';
+    }
+
+    // 渲染星级评分
+    function renderStars(score) {
+      const fullStars = Math.floor(score / 20);
+      const hasHalfStar = (score % 20) >= 10;
+      const emptyStars = 5 - fullStars - (hasHalfStar ? 1 : 0);
+      
+      let html = '';
+      for (let i = 0; i < fullStars; i++) {
+        html += '<span class="material-symbols-outlined text-lg text-yellow-500">star</span>';
+      }
+      if (hasHalfStar) {
+        html += '<span class="material-symbols-outlined text-lg text-yellow-500">star_half</span>';
+      }
+      for (let i = 0; i < emptyStars; i++) {
+        html += '<span class="material-symbols-outlined text-lg text-yellow-500/30">star</span>';
+      }
+      return html;
+    }
+
+    // 格式化时间戳为时间字符串（MM:SS格式）
+    function formatTimeFromTimestamp(timestamp) {
+      if (!timestamp) return '00:00';
+      const date = new Date(timestamp);
+      const minutes = date.getMinutes().toString().padStart(2, '0');
+      const seconds = date.getSeconds().toString().padStart(2, '0');
+      return `${minutes}:${seconds}`;
+    }
+
     // 渲染消息列表
-    function renderMessages(messages) {
-      const container = document.querySelector('.conversation-messages');
-      if (!container) return;
+    function renderMessages(messages, conversation) {
+      // 查找消息容器（在 space-y-6 div 中）
+      const messagesContainer = document.querySelector('.conversation-messages');
+      if (!messagesContainer) return;
+      
+      let container = messagesContainer.querySelector('.space-y-6');
+      if (!container) {
+        // 如果找不到，创建一个
+        container = document.createElement('div');
+        container.className = 'space-y-6';
+        messagesContainer.appendChild(container);
+      }
 
       if (messages.length === 0) {
         container.innerHTML = `
@@ -359,26 +722,48 @@
         return;
       }
 
+      // 获取角色信息
+      const characterName = conversation.character_name || '未知角色';
+      const characterId = conversation.character_id || 'unknown';
+      const avatarColor = getCharacterColor(characterId, conversation.character_avatar_color);
+      
+      // 计算对话框颜色（使用头像颜色的较浅版本）
+      const dialogColor = adjustColorBrightness(avatarColor, 0.15); // 增加15%亮度作为对话框背景
+
       container.innerHTML = messages.map(msg => {
         const isUser = msg.sender === 'user';
         return `
-          <div class="flex items-end gap-3 ${isUser ? 'justify-end ml-auto' : ''} max-w-xl">
+          <div class="message-item flex items-end gap-3 ${isUser ? 'justify-end ml-auto' : ''} max-w-xl" data-message-id="${msg.id}">
             ${!isUser ? `
               <div class="bg-center bg-no-repeat aspect-square bg-cover rounded-full w-10 shrink-0"
-                   style="background-color: #ff6b6b;"></div>
+                   style="background-color: ${avatarColor};"></div>
             ` : ''}
             <div class="flex flex-col gap-1 items-${isUser ? 'end' : 'start'}">
               <p class="text-text-muted-light dark:text-text-muted-dark text-sm font-medium leading-normal px-1">
-                ${isUser ? '我' : '攻略对象'}
+                ${isUser ? '我' : characterName}
               </p>
               <div class="relative group">
-                <p class="text-base font-normal leading-normal rounded-2xl ${isUser ? 'rounded-br-md' : 'rounded-bl-md'}
-                           px-4 py-3 ${isUser ? 'bg-primary text-white' : 'bg-surface-light dark:bg-surface-dark text-text-light dark:text-text-dark'}">
+                <p class="message-content text-base font-normal leading-normal rounded-2xl ${isUser ? 'rounded-br-md' : 'rounded-bl-md'}
+                           px-4 py-3 ${isUser ? 'bg-primary text-white' : ''}" 
+                           style="${isUser ? '' : `background-color: ${dialogColor}; color: ${getContrastColor(dialogColor)};`}">
                   ${msg.content}
                 </p>
+                <textarea class="message-edit hidden text-base font-normal leading-normal rounded-2xl ${isUser ? 'rounded-br-md' : 'rounded-bl-md'}
+                           px-4 py-3 ${isUser ? 'bg-primary text-white placeholder:text-white/70' : ''}
+                           border-2 border-primary focus:outline-none resize-none" 
+                           rows="2" 
+                           style="min-width: 200px; ${isUser ? '' : `background-color: ${dialogColor}; color: ${getContrastColor(dialogColor)};`}">${msg.content}</textarea>
                 <div class="absolute ${isUser ? '-left-2' : '-right-2'} top-1/2 -translate-y-1/2 opacity-0 group-hover:opacity-100 transition-opacity">
-                  <button class="p-1.5 rounded-full bg-background-light dark:bg-background-dark hover:bg-primary/20">
+                  <button class="message-edit-btn p-1.5 rounded-full bg-background-light dark:bg-background-dark hover:bg-primary/20" data-message-id="${msg.id}">
                     <span class="material-symbols-outlined text-lg">edit</span>
+                  </button>
+                </div>
+                <div class="message-actions hidden absolute ${isUser ? '-left-2' : '-right-2'} top-1/2 -translate-y-1/2 flex gap-1">
+                  <button class="message-save-btn p-1.5 rounded-full bg-primary text-white hover:bg-primary/80" data-message-id="${msg.id}">
+                    <span class="material-symbols-outlined text-lg">check</span>
+                  </button>
+                  <button class="message-cancel-btn p-1.5 rounded-full bg-background-light dark:bg-background-dark hover:bg-surface-light dark:hover:bg-surface-dark" data-message-id="${msg.id}">
+                    <span class="material-symbols-outlined text-lg">close</span>
                   </button>
                 </div>
               </div>
@@ -387,8 +772,122 @@
         `;
       }).join('');
 
+      // 绑定编辑事件
+      container.querySelectorAll('.message-edit-btn').forEach(btn => {
+        btn.addEventListener('click', (e) => {
+          e.stopPropagation();
+          const messageId = btn.dataset.messageId;
+          startEditMessage(messageId);
+        });
+      });
+
+      container.querySelectorAll('.message-save-btn').forEach(btn => {
+        btn.addEventListener('click', (e) => {
+          e.stopPropagation();
+          const messageId = btn.dataset.messageId;
+          saveMessage(messageId);
+        });
+      });
+
+      container.querySelectorAll('.message-cancel-btn').forEach(btn => {
+        btn.addEventListener('click', (e) => {
+          e.stopPropagation();
+          const messageId = btn.dataset.messageId;
+          cancelEditMessage(messageId);
+        });
+      });
+
       // 滚动到底部
       container.scrollTop = container.scrollHeight;
+    }
+
+    // 开始编辑消息
+    function startEditMessage(messageId) {
+      const messageItem = document.querySelector(`[data-message-id="${messageId}"]`);
+      if (!messageItem) return;
+
+      const contentEl = messageItem.querySelector('.message-content');
+      const editEl = messageItem.querySelector('.message-edit');
+      const editBtn = messageItem.querySelector('.message-edit-btn');
+      const actionsEl = messageItem.querySelector('.message-actions');
+
+      if (contentEl && editEl && editBtn && actionsEl) {
+        contentEl.classList.add('hidden');
+        editEl.classList.remove('hidden');
+        editBtn.classList.add('hidden');
+        actionsEl.classList.remove('hidden');
+        
+        // 设置编辑框宽度和样式
+        editEl.style.width = contentEl.offsetWidth + 'px';
+        editEl.style.minHeight = contentEl.offsetHeight + 'px';
+        editEl.style.maxWidth = '100%';
+        
+        editEl.focus();
+        // 将光标移到文本末尾
+        editEl.setSelectionRange(editEl.value.length, editEl.value.length);
+        
+        // 自动调整高度
+        editEl.style.height = 'auto';
+        editEl.style.height = Math.max(editEl.scrollHeight, contentEl.offsetHeight) + 'px';
+      }
+    }
+
+    // 保存消息
+    async function saveMessage(messageId) {
+      const messageItem = document.querySelector(`[data-message-id="${messageId}"]`);
+      if (!messageItem) return;
+
+      const editEl = messageItem.querySelector('.message-edit');
+      if (!editEl) return;
+
+      const newContent = editEl.value.trim();
+      if (!newContent) {
+        alert('消息内容不能为空');
+        return;
+      }
+
+      try {
+        if (window.electronAPI && window.electronAPI.updateMessage) {
+          await window.electronAPI.updateMessage(messageId, { content: newContent });
+          
+          // 更新显示
+          const contentEl = messageItem.querySelector('.message-content');
+          if (contentEl) {
+            contentEl.textContent = newContent;
+          }
+          
+          // 退出编辑模式
+          cancelEditMessage(messageId);
+        } else {
+          console.error('Update message API not available');
+          alert('更新消息失败：API不可用');
+        }
+      } catch (error) {
+        console.error('Failed to update message:', error);
+        alert('更新消息失败：' + error.message);
+      }
+    }
+
+    // 取消编辑消息
+    function cancelEditMessage(messageId) {
+      const messageItem = document.querySelector(`[data-message-id="${messageId}"]`);
+      if (!messageItem) return;
+
+      const contentEl = messageItem.querySelector('.message-content');
+      const editEl = messageItem.querySelector('.message-edit');
+      const editBtn = messageItem.querySelector('.message-edit-btn');
+      const actionsEl = messageItem.querySelector('.message-actions');
+
+      if (contentEl && editEl && editBtn && actionsEl) {
+        // 恢复原始内容
+        const originalContent = contentEl.textContent;
+        editEl.value = originalContent;
+        
+        contentEl.classList.remove('hidden');
+        editEl.classList.add('hidden');
+        editBtn.classList.remove('hidden');
+        actionsEl.classList.add('hidden');
+      }
     }
 
     // 加载对话列表
@@ -428,36 +927,11 @@
         // 隐藏加载指示器
         loadingIndicator.style.display = 'none';
 
-        if (allConversations.length === 0) {
-          conversationList.innerHTML = `
-            <div class="text-center py-8">
-              <p class="text-sm text-text-muted-light dark:text-text-muted-dark">还没有对话记录</p>
-            </div>
-          `;
-          return;
-        }
-
+        // 初始化过滤列表
+        filteredConversations = [...allConversations];
+        
         // 渲染对话列表
-        allConversations.forEach(conv => {
-          const item = document.createElement('div');
-          item.className = 'conversation-item flex items-center gap-3 px-3 py-2 rounded-full hover:bg-surface-light dark:hover:bg-surface-dark cursor-pointer';
-          item.dataset.conversationId = conv.id;
-
-          item.innerHTML = `
-            <div class="bg-center bg-no-repeat aspect-square bg-cover rounded-full size-8 shrink-0"
-                 style="background-color: ${conv.character_avatar_color || '#ff6b6b'};"></div>
-            <div class="flex-grow overflow-hidden">
-              <p class="text-text-light dark:text-text-dark text-sm font-medium leading-normal truncate">${conv.title || '无标题对话'}</p>
-              <p class="text-text-muted-light dark:text-text-muted-dark text-xs truncate">${conv.character_name || ''} · ${conv.message_count || 0} 条消息</p>
-            </div>
-          `;
-
-          item.addEventListener('click', () => {
-            selectConversation(conv.id);
-          });
-
-          conversationList.appendChild(item);
-        });
+        renderConversationList();
 
         // 如果有指定的对话ID，打开该对话；否则自动选择第一个
         if (conversationId) {
@@ -476,10 +950,57 @@
       }
     }
 
+    // 渲染对话列表
+    function renderConversationList() {
+      const conversationList = document.getElementById('conversation-list');
+      
+      if (filteredConversations.length === 0) {
+        conversationList.innerHTML = `
+          <div class="text-center py-8">
+            <p class="text-sm text-text-muted-light dark:text-text-muted-dark">${allConversations.length === 0 ? '还没有对话记录' : '没有找到匹配的对话'}</p>
+          </div>
+        `;
+        return;
+      }
+
+      conversationList.innerHTML = '';
+      
+      filteredConversations.forEach(conv => {
+        const item = document.createElement('div');
+        item.className = 'conversation-item flex items-center gap-3 px-3 py-2 rounded-full hover:bg-surface-light dark:hover:bg-surface-dark cursor-pointer';
+        item.dataset.conversationId = conv.id;
+
+        const dateText = formatDate(conv.created_at);
+        
+        item.innerHTML = `
+          <div class="bg-center bg-no-repeat aspect-square bg-cover rounded-full size-8 shrink-0"
+               style="background-color: ${conv.character_avatar_color || '#ff6b6b'};"></div>
+          <div class="flex-grow overflow-hidden">
+            <p class="text-text-light dark:text-text-dark text-sm font-medium leading-normal truncate">${conv.title || '无标题对话'}</p>
+            <p class="text-text-muted-light dark:text-text-muted-dark text-xs truncate">${conv.character_name || ''} · ${conv.message_count || 0} 条消息 · ${dateText}</p>
+          </div>
+        `;
+
+        item.addEventListener('click', () => {
+          selectConversation(conv.id);
+        });
+
+        conversationList.appendChild(item);
+      });
+    }
+
     // 页面加载时初始化
     document.addEventListener('DOMContentLoaded', () => {
       console.log('Conversation editor loaded');
       loadConversations();
+      
+      // 设置搜索框事件监听
+      const searchInput = document.getElementById('search-input');
+      if (searchInput) {
+        searchInput.addEventListener('input', (e) => {
+          filterConversations(e.target.value);
+        });
+      }
     });
   </script>
 </body>

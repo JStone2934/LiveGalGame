@@ -87,3 +87,70 @@ INSERT OR IGNORE INTO ai_suggestions (id, conversation_id, message_id, title, co
 ('sugg_akira_1', 'conv_akira_2', 'msg_akira_2_2', '主动配合', '好的，我们一起看看哪些地方可以改进。', 8, '合作,积极', 1, 1735689702000),
 ('sugg_hana_1', 'conv_hana_2', 'msg_hana_2_2', '表达兴趣', '太好了！我也正好想找新书看。', 12, '兴趣,共鸣', 1, 1735689703000);
 
+-- 插入AI分析报告数据
+INSERT OR IGNORE INTO ai_analysis (id, conversation_id, message_id, insight_type, content, created_at) VALUES
+-- Miyu 对话1的分析报告
+('analysis_miyu_1', 'conv_miyu_1', NULL, 'analysis_report', '{"expressionAbility":{"score":88,"description":"清晰流畅"},"topicSelection":{"score":92,"description":"非常契合"}}', 1735689604000),
+-- Miyu 对话2的分析报告
+('analysis_miyu_2', 'conv_miyu_2', NULL, 'analysis_report', '{"expressionAbility":{"score":85,"description":"自然亲切"},"topicSelection":{"score":90,"description":"话题合适"}}', 1735689704000),
+-- Miyu 对话3的分析报告
+('analysis_miyu_3', 'conv_miyu_3', NULL, 'analysis_report', '{"expressionAbility":{"score":90,"description":"情感真挚"},"topicSelection":{"score":88,"description":"回忆共鸣"}}', 1735689804000),
+-- Akira 对话1的分析报告
+('analysis_akira_1', 'conv_akira_1', NULL, 'analysis_report', '{"expressionAbility":{"score":82,"description":"条理清晰"},"topicSelection":{"score":85,"description":"工作相关"}}', 1735689604000),
+-- Akira 对话2的分析报告
+('analysis_akira_2', 'conv_akira_2', NULL, 'analysis_report', '{"expressionAbility":{"score":86,"description":"表达准确"},"topicSelection":{"score":88,"description":"合作默契"}}', 1735689704000),
+-- Akira 对话3的分析报告
+('analysis_akira_3', 'conv_akira_3', NULL, 'analysis_report', '{"expressionAbility":{"score":84,"description":"沟通有效"},"topicSelection":{"score":87,"description":"学习互助"}}', 1735689804000),
+-- Hana 对话1的分析报告
+('analysis_hana_1', 'conv_hana_1', NULL, 'analysis_report', '{"expressionAbility":{"score":87,"description":"温和有礼"},"topicSelection":{"score":91,"description":"兴趣相投"}}', 1735689605000),
+-- Hana 对话2的分析报告
+('analysis_hana_2', 'conv_hana_2', NULL, 'analysis_report', '{"expressionAbility":{"score":89,"description":"表达自然"},"topicSelection":{"score":93,"description":"非常契合"}}', 1735689705000),
+-- Hana 对话3的分析报告
+('analysis_hana_3', 'conv_hana_3', NULL, 'analysis_report', '{"expressionAbility":{"score":88,"description":"情感细腻"},"topicSelection":{"score":90,"description":"氛围合适"}}', 1735689805000);
+
+-- 插入关键时刻回放数据
+INSERT OR IGNORE INTO ai_analysis (id, conversation_id, message_id, insight_type, content, created_at) VALUES
+-- Miyu 对话1的关键时刻
+('keymoment_miyu_1_1', 'conv_miyu_1', 'msg_miyu_1_2', 'key_moment', '{"content":"回应积极，主动提出一起散步，推进了关系发展"}', 1735689601500),
+-- Miyu 对话2的关键时刻
+('keymoment_miyu_2_1', 'conv_miyu_2', 'msg_miyu_2_2', 'key_moment', '{"content":"回应过于简单，可以展开更多话题"}', 1735689701500),
+-- Akira 对话2的关键时刻
+('keymoment_akira_2_1', 'conv_akira_2', 'msg_akira_2_2', 'key_moment', '{"content":"主动配合工作，展现了合作精神，对方很满意"}', 1735689702500),
+-- Hana 对话2的关键时刻
+('keymoment_hana_2_1', 'conv_hana_2', 'msg_hana_2_2', 'key_moment', '{"content":"表达了对书籍的兴趣，建立了共同话题，好感度提升"}', 1735689703500),
+-- Hana 对话3的关键时刻
+('keymoment_hana_3_1', 'conv_hana_3', 'msg_hana_3_2', 'key_moment', '{"content":"回应过于平淡，错失了展开话题的机会"}', 1735689803500);
+
+-- 插入表现态度分析数据（针对本轮对话的）
+INSERT OR IGNORE INTO ai_analysis (id, conversation_id, message_id, insight_type, content, created_at) VALUES
+-- Miyu 对话1的表现态度分析
+('attitude_miyu_1', 'conv_miyu_1', NULL, 'attitude_analysis', '{"description":"对方在本轮对话中表现非常积极，主动提出一起散步的想法，对共同活动表现出浓厚的兴趣。整体态度友好热情，互动氛围轻松愉快。","affinityChange":10,"trend":"上升"}', 1735689604000),
+-- Miyu 对话2的表现态度分析
+('attitude_miyu_2', 'conv_miyu_2', NULL, 'attitude_analysis', '{"description":"对方在偶遇时主动打招呼，表现出想要一起聊天的意愿。对话中态度友好，愿意分享时间和空间。","affinityChange":8,"trend":"上升"}', 1735689704000),
+-- Miyu 对话3的表现态度分析
+('attitude_miyu_3', 'conv_miyu_3', NULL, 'attitude_analysis', '{"description":"对方主动提起童年回忆，表现出对过去美好时光的怀念。对话中情感真挚，愿意分享个人回忆，关系进一步加深。","affinityChange":12,"trend":"上升"}', 1735689804000),
+-- Akira 对话1的表现态度分析
+('attitude_akira_1', 'conv_akira_1', NULL, 'attitude_analysis', '{"description":"对方在工作相关话题上表现专业认真，主动征求你的意见，展现出合作的态度。虽然话题较为正式，但互动积极。","affinityChange":5,"trend":"上升"}', 1735689604000),
+-- Akira 对话2的表现态度分析
+('attitude_akira_2', 'conv_akira_2', NULL, 'attitude_analysis', '{"description":"对方对你的配合表示感谢，表现出对合作的认可。对话中态度友好，愿意共同解决问题，关系进一步改善。","affinityChange":7,"trend":"上升"}', 1735689704000),
+-- Akira 对话3的表现态度分析
+('attitude_akira_3', 'conv_akira_3', NULL, 'attitude_analysis', '{"description":"对方主动关心你的学习情况，提出一起学习的建议，表现出互助的意愿。态度友好，愿意提供帮助。","affinityChange":6,"trend":"上升"}', 1735689804000),
+-- Hana 对话1的表现态度分析
+('attitude_hana_1', 'conv_hana_1', NULL, 'attitude_analysis', '{"description":"对方在发现共同兴趣时表现出明显的兴奋，主动分享自己的阅读体验。虽然性格内向，但在感兴趣的话题上愿意主动交流。","affinityChange":8,"trend":"上升"}', 1735689604000),
+-- Hana 对话2的表现态度分析
+('attitude_hana_2', 'conv_hana_2', NULL, 'attitude_analysis', '{"description":"对方主动推荐书籍，表现出想要分享和建立联系的意愿。对话中态度友好，愿意进一步交流，关系明显改善。","affinityChange":9,"trend":"上升"}', 1735689704000),
+-- Hana 对话3的表现态度分析
+('attitude_hana_3', 'conv_hana_3', NULL, 'attitude_analysis', '{"description":"对方在安静的环境中表现出放松和舒适，愿意一起度过安静的时光。虽然对话简短，但态度友好，愿意继续接触。","affinityChange":7,"trend":"上升"}', 1735689804000);
+
+-- 插入行动建议数据（可以尝试的话题和避开的话题）
+INSERT OR IGNORE INTO ai_suggestions (id, conversation_id, message_id, title, content, affinity_prediction, tags, is_used, created_at) VALUES
+-- Miyu 的行动建议
+('action_miyu_1', 'conv_miyu_1', NULL, '可以尝试的话题', '最近读过的书、喜欢的音乐风格、户外活动、美食推荐', NULL, '可以尝试,话题', 0, 1735689604000),
+('action_miyu_2', 'conv_miyu_1', NULL, '避开的话题', '过于功利的现实问题、工作压力、负面情绪', NULL, '避开,话题', 0, 1735689604000),
+-- Akira 的行动建议
+('action_akira_1', 'conv_akira_1', NULL, '可以尝试的话题', '学习计划、未来规划、兴趣爱好、共同目标', NULL, '可以尝试,话题', 0, 1735689604000),
+('action_akira_2', 'conv_akira_1', NULL, '避开的话题', '过于私人的问题、负面评价、抱怨', NULL, '避开,话题', 0, 1735689604000),
+-- Hana 的行动建议
+('action_hana_1', 'conv_hana_1', NULL, '可以尝试的话题', '最近读过的书、喜欢的音乐风格、文学作品、安静的活动', NULL, '可以尝试,话题', 0, 1735689604000),
+('action_hana_2', 'conv_hana_1', NULL, '避开的话题', '过于功利的现实问题、嘈杂的环境、过于活跃的话题', NULL, '避开,话题', 0, 1735689604000);
+

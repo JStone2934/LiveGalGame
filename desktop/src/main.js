@@ -20,9 +20,11 @@ function createWindow() {
       enableRemoteModule: false,
       preload: path.join(__dirname, 'preload.js')
     },
-    titleBarStyle: 'default',
+    titleBarStyle: 'hidden', // 隐藏标题栏
     show: false, // 先不显示，准备好后再显示
-    title: 'LiveGalGame Desktop'
+    title: 'LiveGalGame Desktop',
+    // 无边框窗口
+    frame: false
   });
 
   // 加载index.html
@@ -124,6 +126,64 @@ function setupIPC() {
     console.log('HUD拖拽结束');
   });
 
+  // 主窗口控制
+  ipcMain.on('minimize-window', () => {
+    if (mainWindow) {
+      mainWindow.minimize();
+      console.log('主窗口最小化');
+    }
+  });
+
+  ipcMain.on('close-window', () => {
+    if (mainWindow) {
+      mainWindow.close();
+      console.log('主窗口关闭');
+    }
+  });
+
+  // 主窗口拖拽相关变量
+  let mainDragStartPos = { x: 0, y: 0 };
+  let mainDragWindowBounds = { x: 0, y: 0, width: 0, height: 0 };
+  let isMainDragging = false;
+
+  // 开始拖拽主窗口
+  ipcMain.on('start-drag', (event, pos) => {
+    if (!mainWindow) return;
+    isMainDragging = true;
+    mainDragStartPos = pos;
+    // 获取窗口的完整边界信息
+    const bounds = mainWindow.getBounds();
+    mainDragWindowBounds = {
+      x: bounds.x,
+      y: bounds.y,
+      width: bounds.width,
+      height: bounds.height
+    };
+    console.log('主窗口拖拽开始，窗口边界:', mainDragWindowBounds);
+  });
+
+  // 更新主窗口拖拽位置
+  ipcMain.on('update-drag', (event, pos) => {
+    if (!mainWindow || !isMainDragging) return;
+    const deltaX = pos.x - mainDragStartPos.x;
+    const deltaY = pos.y - mainDragStartPos.y;
+    const newX = mainDragWindowBounds.x + deltaX;
+    const newY = mainDragWindowBounds.y + deltaY;
+    // 使用setBounds同时设置位置和大小
+    mainWindow.setBounds({
+      x: newX,
+      y: newY,
+      width: mainDragWindowBounds.width,
+      height: mainDragWindowBounds.height
+    });
+  });
+
+  // 结束主窗口拖拽
+  ipcMain.on('end-drag', () => {
+    isMainDragging = false;
+    console.log('主窗口拖拽结束');
+  });
+
   console.log('IPC通信已设置');
 
   // 数据库IPC处理器
@@ -197,6 +257,20 @@ function setupIPC() {
     }
   });
 
+  // 获取角色页面统计数据
+  ipcMain.handle('db-get-character-page-statistics', () => {
+    try {
+      return db.getCharacterPageStatistics();
+    } catch (error) {
+      console.error('Error getting character page statistics:', error);
+      return {
+        characterCount: 0,
+        activeConversationCount: 0,
+        avgAffinity: 0
+      };
+    }
+  });
+
   // 获取最近对话
   ipcMain.handle('db-get-recent-conversations', (event, limit) => {
     try {
@@ -214,6 +288,133 @@ function setupIPC() {
     } catch (error) {
       console.error('Error getting all conversations:', error);
       return [];
+    }
+  });
+
+  // 更新消息
+  ipcMain.handle('db-update-message', (event, messageId, updates) => {
+    try {
+      return db.updateMessage(messageId, updates);
+    } catch (error) {
+      console.error('Error updating message:', error);
+      return null;
+    }
+  });
+
+  // 获取对话的AI分析数据
+  ipcMain.handle('db-get-conversation-ai-data', (event, conversationId) => {
+    try {
+      return db.getConversationAIData(conversationId);
+    } catch (error) {
+      console.error('Error getting conversation AI data:', error);
+      return {
+        analysisReport: null,
+        keyMoments: [],
+        personalityAnalysis: null,
+        actionSuggestions: []
+      };
+    }
+  });
+
+  // 获取角色详情
+  ipcMain.handle('db-get-character-details', (event, characterId) => {
+    try {
+      return db.getCharacterDetails(characterId);
+    } catch (error) {
+      console.error('Error getting character details:', error);
+      return null;
+    }
+  });
+
+  // 更新角色详情的自定义字段
+  ipcMain.handle('db-update-character-details-custom-fields', (event, characterId, customFields) => {
+    try {
+      return db.updateCharacterDetailsCustomFields(characterId, customFields);
+    } catch (error) {
+      console.error('Error updating character details custom fields:', error);
+      return false;
+    }
+  });
+
+  // 重新生成角色详情（从会话中）
+  ipcMain.handle('db-regenerate-character-details', (event, characterId) => {
+    try {
+      return db.generateCharacterDetailsFromConversations(characterId);
+    } catch (error) {
+      console.error('Error regenerating character details:', error);
+      return null;
+    }
+  });
+
+  // ========== LLM配置相关IPC处理器 ==========
+
+  // 保存LLM配置
+  ipcMain.handle('llm-save-config', (event, configData) => {
+    try {
+      return db.saveLLMConfig(configData);
+    } catch (error) {
+      console.error('Error saving LLM config:', error);
+      throw error;
+    }
+  });
+
+  // 获取所有LLM配置
+  ipcMain.handle('llm-get-all-configs', () => {
+    try {
+      return db.getAllLLMConfigs();
+    } catch (error) {
+      console.error('Error getting LLM configs:', error);
+      return [];
+    }
+  });
+
+  // 获取默认LLM配置
+  ipcMain.handle('llm-get-default-config', () => {
+    try {
+      return db.getDefaultLLMConfig();
+    } catch (error) {
+      console.error('Error getting default LLM config:', error);
+      return null;
+    }
+  });
+
+  // 获取指定ID的LLM配置
+  ipcMain.handle('llm-get-config-by-id', (event, id) => {
+    try {
+      return db.getLLMConfigById(id);
+    } catch (error) {
+      console.error('Error getting LLM config:', error);
+      return null;
+    }
+  });
+
+  // 删除LLM配置
+  ipcMain.handle('llm-delete-config', (event, id) => {
+    try {
+      return db.deleteLLMConfig(id);
+    } catch (error) {
+      console.error('Error deleting LLM config:', error);
+      throw error;
+    }
+  });
+
+  // 测试LLM连接
+  ipcMain.handle('llm-test-connection', async (event, configData) => {
+    try {
+      return await db.testLLMConnection(configData);
+    } catch (error) {
+      console.error('Error testing LLM connection:', error);
+      return { success: false, message: error.message || '连接测试失败' };
+    }
+  });
+
+  // 设置默认LLM配置
+  ipcMain.handle('llm-set-default-config', (event, id) => {
+    try {
+      return db.setDefaultLLMConfig(id);
+    } catch (error) {
+      console.error('Error setting default LLM config:', error);
+      throw error;
     }
   });
 

@@ -89,27 +89,11 @@
             <span class="material-symbols-outlined">history</span>
             <p class="text-sm font-medium leading-normal">历史对话</p>
           </a>
-          <a class="nav-item flex items-center gap-3 px-3 py-2 rounded text-white/80 hover:bg-white/10 transition-colors" href="#" data-page="llm">
-            <span class="material-symbols-outlined">developer_board</span>
-            <p class="text-sm font-medium leading-normal">LLM 配置</p>
-          </a>
           <a class="nav-item flex items-center gap-3 px-3 py-2 rounded text-white/80 hover:bg-white/10 transition-colors" href="./settings.html" data-page="settings">
             <span class="material-symbols-outlined">settings</span>
             <p class="text-sm font-medium leading-normal">设置</p>
           </a>
         </nav>
-      </div>
-
-      <!-- 底部链接 -->
-      <div class="flex flex-col gap-1">
-        <a class="flex items-center gap-3 px-3 py-2 rounded text-white/80 hover:bg-white/10 transition-colors" href="#">
-          <span class="material-symbols-outlined">help</span>
-          <p class="text-sm font-medium leading-normal">帮助</p>
-        </a>
-        <a class="flex items-center gap-3 px-3 py-2 rounded text-white/80 hover:bg-white/10 transition-colors" href="#">
-          <span class="material-symbols-outlined">logout</span>
-          <p class="text-sm font-medium leading-normal">登出</p>
-        </a>
       </div>
     </aside>
 
@@ -261,7 +245,7 @@
         const dateText = daysAgo === 0 ? '今天' : daysAgo === 1 ? '昨天' : `${daysAgo}天前`;
         
         return `
-          <div class="conversation-card flex flex-col rounded-xl border border-border-light dark:border-border-dark bg-surface-light dark:bg-surface-dark shadow-sm overflow-hidden group">
+          <a href="./conversation-editor.html?character=${conv.character_id}&conversation=${conv.id}" class="conversation-card flex flex-col rounded-xl border border-border-light dark:border-border-dark bg-surface-light dark:bg-surface-dark shadow-sm overflow-hidden group hover:shadow-md transition-shadow cursor-pointer">
             <div class="p-6 flex-grow">
               <div class="flex items-start justify-between mb-2">
                 <div class="flex-1">
@@ -277,13 +261,10 @@
               </div>
               <p class="text-text-muted-light dark:text-text-muted-dark text-sm line-clamp-2">${conv.summary || '暂无摘要'}</p>
             </div>
-            <div class="px-6 py-4 border-t border-border-light dark:border-border-dark bg-primary-subtle-light/50 dark:bg-primary-subtle-dark/50 flex justify-between items-center">
+            <div class="px-6 py-4 border-t border-border-light dark:border-border-dark bg-primary-subtle-light/50 dark:bg-primary-subtle-dark/50">
               <p class="text-xs text-text-muted-light dark:text-text-muted-dark">最后编辑：${dateText}</p>
-              <button class="opacity-0 group-hover:opacity-100 transition-opacity p-2 rounded-full hover:bg-primary-subtle-light dark:hover:bg-primary-subtle-dark text-text-muted-light dark:text-text-muted-dark hover:text-primary dark:hover:text-white" onclick="window.location.href='./conversation-editor.html?character=${conv.character_id}&conversation=${conv.id}'">
-                <span class="material-symbols-outlined text-base">edit</span>
-              </button>
             </div>
-          </div>
+          </a>
         `;
       }).join('') + `
         <a href="./conversation-editor.html" class="group flex min-h-48 flex-col items-center justify-center gap-2 rounded-xl border-2 border-dashed border-border-light dark:border-border-dark p-6 text-center transition-colors hover:border-primary/50 hover:bg-primary-subtle-light/50 dark:hover:border-primary/50 dark:hover:bg-primary-subtle-dark/50">
