@@ -85,14 +85,17 @@ pnpm run prepare:python
 - 本项目桌面端的本地 ASR **默认使用 FunASR ONNX（`funasr-onnx + onnxruntime`）**，因此 **不需要安装 `torch`**。
 - Windows 也使用 FunASR ONNX，无需额外安装 faster-whisper。
 
-补充说明（关于 `prepare:python`）：
+**依赖管理**：
 
-- **默认（开发模式）**：在 macOS 上会优先使用本机的 `uv` 来创建 `python-env` 并安装依赖（更轻量），无 `uv` 时回退到 venv/pip。
-- **打包/发布（bundle 模式）**：如你需要在本机构建可搬运的内置 Python 环境，可执行：
+- 项目使用 `pyproject.toml` 管理 Python 依赖（现代标准）
+- 推荐安装 [uv](https://docs.astral.sh/uv/)（更快的包管理器）：`brew install uv`
 
-```bash
-PREPARE_PYTHON_MODE=bundle pnpm run prepare:python
-```
+**关于 `prepare:python`**：
+
+| 模式 | 命令 | 说明 |
+|------|------|------|
+| 开发（默认） | `pnpm run prepare:python` | macOS 优先使用 `uv sync`，无 uv 时回退到 venv/pip |
+| 打包/发布 | `PREPARE_PYTHON_MODE=bundle pnpm run prepare:python` | 创建可搬运的内置 Python 环境 |
 
 ### 启动
 
@@ -107,7 +110,7 @@ pnpm dev
 - **Windows**: 10 / 11
 - **macOS**: 12.0+
 - 需要麦克风权限
-- Node.js 20+, Python 3.8+
+- Node.js 20+, Python 3.10+（推荐安装 [uv](https://docs.astral.sh/uv/)）
 
 ---
 

@@ -20,6 +20,7 @@ const venvDir = path.join(projectRoot, 'python-env');
 const bootstrapDir = path.join(projectRoot, 'python-bootstrap');
 const miniforgePrefix = path.join(bootstrapDir, 'miniforge');
 const requirementsPath = path.join(projectRoot, 'requirements.txt');
+const pyprojectPath = path.join(projectRoot, 'pyproject.toml');
 
 const isWin = process.platform === 'win32';
 const isMac = process.platform === 'darwin';
@@ -92,6 +93,38 @@ function hasUv() {
   return res.success;
 }
 
+function hasPyproject() {
+  return fs.existsSync(pyprojectPath);
+}
+
+function pathExistsOrSymlink(p) {
+  // fs.existsSync 会跟随 symlink；当 symlink 断链时会返回 false。
+  // 但我们需要把“断链 symlink”也当作“路径占位存在”，否则创建目录会报 File exists。
+  if (fs.existsSync(p)) return true;
+  try {
+    fs.lstatSync(p);
+    return true;
+  } catch {
+    return false;
+  }
+}
+
+function removeIfBrokenSymlink(p) {
+  try {
+    const stat = fs.lstatSync(p);
+    if (!stat.isSymbolicLink()) return false;
+    // 如果是断链 symlink：existsSync 会是 false；这时应删除 link 本身
+    if (!fs.existsSync(p)) {
+      console.warn(`[prepare-python-env] Detected broken symlink, removing: ${p}`);
+      fs.unlinkSync(p);
+      return true;
+    }
+    return false;
+  } catch {
+    return false;
+  }
+}
+
 function bootstrapMiniforge() {
   if (process.platform !== 'darwin') {
     throw new Error(
@@ -144,6 +177,9 @@ function bootstrapMiniforge() {
 }
 
 function ensureCondaEnv(miniforgePython, { forceRebuild = false } = {}) {
+  // 兼容：venvDir 可能是断链 symlink（例如 python-env -> .venv 且 .venv 不存在）
+  removeIfBrokenSymlink(venvDir);
+
   let condaBin = isWin
     ? path.join(miniforgePrefix, 'Scripts', 'conda.exe')
     : path.join(miniforgePrefix, 'bin', 'conda');
@@ -185,6 +221,9 @@ function ensureCondaEnv(miniforgePython, { forceRebuild = false } = {}) {
 }
 
 function ensureVenv(pythonCmd, { forceRebuild = false } = {}) {
+  // 兼容：venvDir 可能是断链 symlink（例如 python-env -> .venv 且 .venv 不存在）
+  removeIfBrokenSymlink(venvDir);
+
   if (fs.existsSync(venvDir) && forceRebuild) {
     console.log(`[prepare-python-env] removing existing venv for rebuild: ${venvDir}`);
     fs.rmSync(venvDir, { recursive: true, force: true });
@@ -310,7 +349,10 @@ function packCondaEnv() {
 
 function ensureUvVenv(pythonSpec, { forceRebuild = false, relocatable = false } = {}) {
   const useRelocatable = relocatable ? '--relocatable' : '';
-  if (fs.existsSync(venvDir) && (forceRebuild || !isVenvPrefix(venvDir))) {
+  // 兼容：venvDir 可能是断链 symlink（例如 python-env -> .venv 且 .venv 不存在）
+  removeIfBrokenSymlink(venvDir);
+
+  if (pathExistsOrSymlink(venvDir) && (forceRebuild || !isVenvPrefix(venvDir))) {
     console.log(`[prepare-python-env] (uv) clearing existing env: ${venvDir}`);
     // uv venv --clear 会清理目标目录；这里也兼容“目录存在但不是 venv”的情况
     run(`uv venv "${venvDir}" --clear ${useRelocatable} --python "${pythonSpec}" --managed-python`);
@@ -331,6 +373,69 @@ function installDepsWithUv() {
   console.log('[prepare-python-env] (uv) installing requirements via uv pip ...');
   // uv 会自己处理 pip/resolve/缓存；这里显式指定目标 python
   run(`uv pip install -r "${requirementsPath}" -p "${pythonPath}"`);
+}
+
+/**
+ * 使用 uv sync（pyproject.toml 模式）一次性创建 venv 并安装依赖
+ * 比 uv venv + uv pip install 更简洁、更可靠
+ */
+function ensureUvSync({ forceRebuild = false, pythonSpec = desiredPy } = {}) {
+  // 清理断链 symlink
+  removeIfBrokenSymlink(venvDir);
+
+  if (forceRebuild && pathExistsOrSymlink(venvDir)) {
+    console.log(`[prepare-python-env] (uv sync) removing existing env for rebuild: ${venvDir}`);
+    fs.rmSync(venvDir, { recursive: true, force: true });
+  }
+
+  console.log(`[prepare-python-env] (uv sync) syncing project (python=${pythonSpec}) ...`);
+  // uv sync 会自动：创建 venv（如不存在）、解析 pyproject.toml、安装依赖
+  // --python 指定版本，--managed-python 让 uv 自动下载对应版本
+  // UV_PROJECT_ENVIRONMENT 指定 venv 路径（默认是 .venv，我们改成 python-env）
+  run(`uv sync --python "${pythonSpec}" --managed-python`, {
+    cwd: projectRoot,
+    env: { ...process.env, UV_PROJECT_ENVIRONMENT: venvDir },
+  });
+}
+
+/**
+ * Patch funasr_onnx/__init__.py，移除对 torch 的无用依赖（兼容层）
+ * funasr_onnx >= 0.3 的 __init__.py 无条件导入了 sensevoice_bin（需要 torch），
+ * 但本项目不使用 SenseVoice。当前 pyproject.toml 锁定 funasr-onnx < 0.3 以避免此问题，
+ * 此 patch 仅作为兼容层，以防未来升级。
+ */
+function patchFunasrOnnx() {
+  const sitePackages = path.join(venvDir, isWin ? 'Lib/site-packages' : 'lib/python' + desiredPy + '/site-packages');
+  const initFile = path.join(sitePackages, 'funasr_onnx', '__init__.py');
+
+  if (!fs.existsSync(initFile)) {
+    console.log('[prepare-python-env] funasr_onnx not found, skipping patch');
+    return;
+  }
+
+  let content = fs.readFileSync(initFile, 'utf-8');
+
+  // 检查是否已经 patch 过
+  if (content.includes('# PATCHED: sensevoice_bin')) {
+    console.log('[prepare-python-env] funasr_onnx already patched');
+    return;
+  }
+
+  // 替换 sensevoice_bin 的导入为 try/except
+  const originalImport = 'from .sensevoice_bin import SenseVoiceSmall';
+  const patchedImport = `# PATCHED: sensevoice_bin requires torch, but we don't use SenseVoice
+try:
+    from .sensevoice_bin import SenseVoiceSmall
+except ImportError:
+    SenseVoiceSmall = None`;
+
+  if (content.includes(originalImport)) {
+    content = content.replace(originalImport, patchedImport);
+    fs.writeFileSync(initFile, content);
+    console.log('[prepare-python-env] patched funasr_onnx to skip torch dependency');
+  } else {
+    console.log('[prepare-python-env] funasr_onnx import pattern not found, skipping patch');
+  }
 }
 
 /**
@@ -398,10 +503,20 @@ function main() {
     // - dev: 默认用 uv（若可用）创建 venv 并安装依赖，避免 Miniforge+conda-pack 的笨重流程
     // - bundle: 默认使用 conda env + conda-pack，确保可搬运（打包发布）
     if (useUv) {
-      // dev 默认不需要 relocatable；bundle 模式下允许用 uv 的 relocatable venv（实验性）
-      ensureUvVenv(desiredPy, { forceRebuild, relocatable: useBundle });
-      installDepsWithUv();
-      fixPythonSymlinks();
+      // 优先使用 pyproject.toml + uv sync（更现代、更干净）
+      if (hasPyproject()) {
+        ensureUvSync({ forceRebuild, pythonSpec: desiredPy });
+      } else {
+        // 回退：uv venv + uv pip install（兼容只有 requirements.txt 的场景）
+        ensureUvVenv(desiredPy, { forceRebuild, relocatable: useBundle });
+        installDepsWithUv();
+      }
+      // patch funasr_onnx 以移除对 torch 的无用依赖
+      patchFunasrOnnx();
+      // 只在 bundle 模式下 fix symlinks（开发模式保持 symlink 指向 uv managed python）
+      if (useBundle) {
+        fixPythonSymlinks();
+      }
     } else if (useBundle) {
       const updatedPy = ensureCondaEnv(pythonCmd, { forceRebuild });
       if (updatedPy) {

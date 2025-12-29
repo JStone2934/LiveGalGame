@@ -1,0 +1,40 @@
+[project]
+name = "livegalgame-desktop-backend"
+version = "0.1.0"
+description = "LiveGalGame Desktop ASR Backend"
+readme = "README.md"
+requires-python = ">=3.10,<3.13"
+
+dependencies = [
+    # ASR 核心（0.2.5 没有 SenseVoice 导入，不需要 torch）
+    "funasr-onnx>=0.2.5,<0.3",
+    "onnxruntime",
+    
+    # 音频处理
+    "soundfile",
+    "numpy",
+    
+    # 模型下载
+    "huggingface_hub",
+    "modelscope",
+    
+    # Web API
+    "fastapi",
+    "uvicorn[standard]",
+    "websockets",
+    "python-multipart",
+    
+    # 网络请求（含 socks 代理支持）
+    "requests[socks]",
+    "httpx[socks]",
+    
+    # FunASR ONNX 内部依赖
+    "jieba",
+    
+    # 打包
+    "pyinstaller",
+]
+
+[tool.uv]
+# 使用 uv 管理的 Python（自动下载）
+managed = true
