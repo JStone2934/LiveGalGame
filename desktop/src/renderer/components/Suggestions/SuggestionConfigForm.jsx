@@ -22,6 +22,29 @@ export const SuggestionConfigForm = ({
         </div>
       )}
 
+      {/* 用户个人档案 */}
+      <div className="p-4 rounded-lg border border-border-light dark:border-border-dark">
+        <div className="mb-3">
+          <p className="font-medium text-text-light dark:text-text-dark flex items-center gap-2">
+            <span className="material-symbols-outlined text-primary text-lg">person</span>
+            用户个人档案
+          </p>
+          <p className="text-sm text-text-muted-light dark:text-text-muted-dark mt-1">
+            描述你的性格特点、沟通风格、偏好等，AI 会参考这些信息生成更符合你风格的建议。
+          </p>
+        </div>
+        <textarea
+          value={form.user_profile || ''}
+          onChange={(e) => onUpdateField('user_profile', e.target.value)}
+          placeholder="例如：我比较内向，喜欢用幽默的方式表达；不太擅长直接表达感情，更喜欢含蓄暗示..."
+          rows={3}
+          className="w-full px-3 py-2 border border-border-light dark:border-border-dark rounded-lg bg-surface-light dark:bg-surface-dark text-text-light dark:text-text-dark placeholder-text-muted-light dark:placeholder-text-muted-dark focus:outline-none focus:ring-2 focus:ring-primary/50 resize-none"
+        />
+        <p className="text-xs text-text-muted-light dark:text-text-muted-dark mt-2">
+          ⚠️ 此内容会影响 AI 生成的建议风格，请谨慎填写。留空则使用通用策略。
+        </p>
+      </div>
+
       <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between p-4 rounded-lg border border-border-light dark:border-border-dark">
         <div>
           <p className="font-medium text-text-light dark:text-text-dark">被动推荐</p>

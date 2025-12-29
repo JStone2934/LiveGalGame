@@ -139,12 +139,16 @@ export default class LLMSuggestionService {
       messageLimit: contextLimit
     });
 
+    // 获取用户个人档案
+    const userProfile = suggestionConfig?.user_profile || '';
+
     const prompt = this.buildSuggestionPrompt({
       count,
       trigger,
       reason,
       context,
-      previousSuggestions
+      previousSuggestions,
+      userProfile
     });
 
     const requestParams = {
@@ -412,7 +416,7 @@ export default class LLMSuggestionService {
     }
   }
 
-  buildSuggestionPrompt({ count, trigger, reason, context, previousSuggestions = [] }) {
+  buildSuggestionPrompt({ count, trigger, reason, context, previousSuggestions = [], userProfile = '' }) {
     const triggerLabel = trigger === 'manual' ? '用户主动请求' : `系统被动触发（原因：${reason}）`;
     const triggerGuidance = {
       manual: '用户主动求助：提供多元策略（保守/进取/幽默/共情），帮助选择其一。',
@@ -452,11 +456,15 @@ export default class LLMSuggestionService {
       ? '- 必须生成建议，禁止输出 SKIP。'
       : '- 如果对话不需要建议（角色自言自语/话没说完/自然闲聊流畅），直接输出：SKIP';
 
+    // 用户个人档案：如果为空则显示提示文字
+    const userProfileText = safeText(userProfile).trim() || '（未设置，生成建议时将使用通用策略）';
+
     return renderPromptTemplate('suggestion', {
       triggerLabel,
       triggerGuidance,
       characterProfile: safeText(context.characterProfile),
       affinityStageText,
+      userProfile: userProfileText,
       historyText,
       emotionText,
       previousSuggestionText,
@@ -487,9 +495,10 @@ export default class LLMSuggestionService {
         ? item.tags.split(/[,，、]/).map((tag) => tag.trim()).filter(Boolean).slice(0, 3)
         : [];
     const suggestionText = item.suggestion || item.title || item.content || `选项 ${index + 1}`;
+    // affinity_delta 范围：0-10（对方接受度预测）
     const affinityPrediction =
       typeof item.affinity_delta === 'number' && !Number.isNaN(item.affinity_delta)
-        ? Math.max(-10, Math.min(10, Math.round(item.affinity_delta)))
+        ? Math.max(0, Math.min(10, Math.round(item.affinity_delta)))
         : null;
     return {
       id: suggestionId,

@@ -87,13 +87,14 @@ const csvSplit = (line) => {
   return result;
 };
 
+// affinity_delta 范围：0-10（对方接受度预测）
 const parseAffinityDelta = (raw) => {
   if (raw === undefined || raw === null) return null;
   const text = normalizeValue(String(raw));
   if (!text) return null;
   const parsed = Number.parseInt(text, 10);
   if (Number.isNaN(parsed)) return null;
-  return Math.max(-10, Math.min(10, parsed));
+  return Math.max(0, Math.min(10, parsed));
 };
 
 export class ToonSuggestionStreamParser {

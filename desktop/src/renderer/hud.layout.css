@@ -461,6 +461,49 @@ body {
   color: #5b21b6;
 }
 
+/* 接受度分数显示 */
+.suggestion-affinity {
+  display: flex;
+  justify-content: flex-end;
+  margin-top: 8px;
+}
+
+.affinity-score {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 24px;
+  height: 20px;
+  padding: 0 6px;
+  font-size: 11px;
+  font-weight: 700;
+  border-radius: 10px;
+}
+
+.affinity-score.high {
+  background: rgba(34, 197, 94, 0.15);
+  color: #16a34a;
+  border: 1px solid rgba(34, 197, 94, 0.3);
+}
+
+.affinity-score.medium {
+  background: rgba(59, 130, 246, 0.15);
+  color: #2563eb;
+  border: 1px solid rgba(59, 130, 246, 0.3);
+}
+
+.affinity-score.low {
+  background: rgba(245, 158, 11, 0.15);
+  color: #d97706;
+  border: 1px solid rgba(245, 158, 11, 0.3);
+}
+
+.affinity-score.very-low {
+  background: rgba(239, 68, 68, 0.15);
+  color: #dc2626;
+  border: 1px solid rgba(239, 68, 68, 0.3);
+}
+
 /* 换一批按钮容器 */
 .suggestions-refresh-container {
   display: flex;

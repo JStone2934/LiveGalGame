@@ -17,6 +17,7 @@ export default function SuggestionConfigManager(BaseClass) {
       ensureColumn('situation_llm_enabled', 'ALTER TABLE suggestion_configs ADD COLUMN situation_llm_enabled INTEGER DEFAULT 0');
       ensureColumn('situation_model_name', "ALTER TABLE suggestion_configs ADD COLUMN situation_model_name TEXT DEFAULT 'gpt-4o-mini'");
       ensureColumn('thinking_enabled', 'ALTER TABLE suggestion_configs ADD COLUMN thinking_enabled INTEGER DEFAULT 0');
+      ensureColumn('user_profile', 'ALTER TABLE suggestion_configs ADD COLUMN user_profile TEXT DEFAULT NULL');
 
       // 补齐已有行的默认值
       this.db
@@ -120,7 +121,8 @@ export default function SuggestionConfigManager(BaseClass) {
         'context_message_limit',
         'topic_detection_enabled',
         'model_name',
-        'thinking_enabled'
+        'thinking_enabled',
+        'user_profile'
       ];
 
       updatableFields.forEach((field) => {

@@ -144,6 +144,17 @@ export const SuggestionsPanel = ({
                   ))}
                 </div>
               )}
+              {typeof suggestion.affinity_prediction === 'number' && (
+                <div className="suggestion-affinity" title="预测对方接受度 (0-10)">
+                  <span className={`affinity-score ${
+                    suggestion.affinity_prediction >= 8 ? 'high' :
+                    suggestion.affinity_prediction >= 6 ? 'medium' :
+                    suggestion.affinity_prediction >= 4 ? 'low' : 'very-low'
+                  }`}>
+                    {suggestion.affinity_prediction}
+                  </span>
+                </div>
+              )}
               {!suggestion.is_selected ? (
                 <div className="suggestion-card-actions">
                   <button

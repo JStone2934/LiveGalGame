@@ -10,7 +10,7 @@
 - `GET /health`：健康检查
 
 ## 目录
-- `pyproject.toml`：依赖由 uv 管理
+- `pyproject.toml`**：依赖由 uv 管理**
 - `main.py`：入口，启动 uvicorn 加载 app
 - `app/`：模块化代码
   - `db.py`：引擎 & session

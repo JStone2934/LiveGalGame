@@ -100,11 +100,15 @@ export default function ReviewSection({ conversationId, onReviewGenerated }) {
                     <span>关键节点: {summary.node_count || 0}</span>
                     <span>命中建议: {summary.matched_count || 0}</span>
                 </div>
-                {summary.total_affinity_change !== undefined && (
+                {summary.total_affinity_change !== undefined && summary.total_affinity_change !== null && (
                     <div className="flex items-center justify-between text-xs text-text-muted-light dark:text-text-muted-dark">
-                        <span>好感变化:</span>
-                        <span className={summary.total_affinity_change > 0 ? 'text-green-500' : summary.total_affinity_change < 0 ? 'text-red-500' : ''}>
-                            {summary.total_affinity_change > 0 ? '+' : ''}{summary.total_affinity_change}
+                        <span>平均接受度:</span>
+                        <span className={
+                            summary.total_affinity_change >= 8 ? 'text-green-500' :
+                            summary.total_affinity_change >= 6 ? 'text-blue-500' :
+                            summary.total_affinity_change >= 4 ? 'text-yellow-500' : 'text-red-500'
+                        }>
+                            {summary.total_affinity_change}/10
                         </span>
                     </div>
                 )}

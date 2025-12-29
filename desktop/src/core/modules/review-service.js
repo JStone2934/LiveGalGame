@@ -585,10 +585,12 @@ export default class ReviewService {
     }
 
     computeAffinityChangeFromSelection(reviewNodes = []) {
-        const deltas = Array.isArray(reviewNodes) ? reviewNodes.map((n) => n?.selected_affinity_delta).filter((v) => typeof v === 'number' && !Number.isNaN(v)) : [];
-        const sum = deltas.reduce((acc, v) => acc + v, 0);
-        // 复盘口径：整段对话总变化限制到 [-10, +10]（与 UI/历史数据兼容）
-        return Math.max(-10, Math.min(10, Math.round(sum)));
+        // affinity_delta 现在是 0-10 的接受度评分，计算平均接受度
+        const scores = Array.isArray(reviewNodes) ? reviewNodes.map((n) => n?.selected_affinity_delta).filter((v) => typeof v === 'number' && !Number.isNaN(v)) : [];
+        if (scores.length === 0) return null;
+        const avg = scores.reduce((acc, v) => acc + v, 0) / scores.length;
+        // 返回平均接受度（0-10），保留一位小数
+        return Math.round(avg * 10) / 10;
     }
 
     async callLLMForReview(messages, nodes) {

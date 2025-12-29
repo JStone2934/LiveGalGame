@@ -78,8 +78,8 @@ pnpm install
 ### 配置语音识别
 
 ```bash
-# 准备内置 Python 运行环境（会创建 desktop/python-env 并安装依赖）
-pnpm run prepare:python
+# 准备内置 Python 运行环境（会创建 desktop/python-env 并安装依赖,uv 会自行管理lib）
+PREPARE_PYTHON_TOOL=uv pnpm run prepare:python
 ```
 
 - 本项目桌面端的本地 ASR **默认使用 FunASR ONNX（`funasr-onnx + onnxruntime`）**，因此 **不需要安装 `torch`**。

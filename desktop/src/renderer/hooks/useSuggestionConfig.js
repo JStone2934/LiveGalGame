@@ -7,7 +7,8 @@ const DEFAULT_SUGGESTION_FORM = {
   silence_threshold_seconds: 3,
   message_threshold_count: 3,
   cooldown_seconds: 15,
-  context_message_limit: 10
+  context_message_limit: 10,
+  user_profile: ''
 };
 
 /**
@@ -37,7 +38,8 @@ export const useSuggestionConfig = () => {
       silence_threshold_seconds: coerceNumberValue(merged.silence_threshold_seconds, DEFAULT_SUGGESTION_FORM.silence_threshold_seconds),
       message_threshold_count: coerceNumberValue(merged.message_threshold_count, DEFAULT_SUGGESTION_FORM.message_threshold_count),
       cooldown_seconds: coerceNumberValue(merged.cooldown_seconds, DEFAULT_SUGGESTION_FORM.cooldown_seconds),
-      context_message_limit: coerceNumberValue(merged.context_message_limit, DEFAULT_SUGGESTION_FORM.context_message_limit)
+      context_message_limit: coerceNumberValue(merged.context_message_limit, DEFAULT_SUGGESTION_FORM.context_message_limit),
+      user_profile: merged.user_profile || ''
     };
   }, []);
 
@@ -103,6 +105,7 @@ export const useSuggestionConfig = () => {
         message_threshold_count: coerceNumberValue(suggestionForm.message_threshold_count, DEFAULT_SUGGESTION_FORM.message_threshold_count),
         cooldown_seconds: coerceNumberValue(suggestionForm.cooldown_seconds, DEFAULT_SUGGESTION_FORM.cooldown_seconds),
         context_message_limit: coerceNumberValue(suggestionForm.context_message_limit, DEFAULT_SUGGESTION_FORM.context_message_limit),
+        user_profile: suggestionForm.user_profile || null,
         // 场景判定模型配置项取消，统一使用数据库默认 LLM；后台按需保持开启
         topic_detection_enabled: 1,
         situation_llm_enabled: 1
