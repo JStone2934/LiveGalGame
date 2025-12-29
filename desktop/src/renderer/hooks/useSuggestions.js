@@ -72,7 +72,7 @@ export const useSuggestions = (sessionInfo) => {
     } catch (err) {
       console.error('加载建议配置失败：', err);
     }
-  }, []);
+  }, [sessionInfo]);
 
   const updateSuggestionConfig = useCallback(async (updates = {}) => {
     try {
@@ -108,11 +108,11 @@ export const useSuggestions = (sessionInfo) => {
   const resetStreamState = useCallback((reason = 'unknown') => {
     console.log(`[useSuggestions] resetStreamState called (reason: ${reason}). Clearing active stream:`, activeStreamRef.current);
     activeStreamRef.current = { id: null, trigger: null, reason: null };
-  }, []);
+  }, [sessionInfo]);
 
   const logStreamCharacters = useCallback(() => {
     // Disabled: per-character logging is extremely noisy and can stall the renderer.
-  }, []);
+  }, [sessionInfo]);
 
   const startSuggestionStream = useCallback(
     ({ trigger, reason }) => {
@@ -163,6 +163,50 @@ export const useSuggestions = (sessionInfo) => {
     [sessionInfo, suggestionConfig, suggestions]
   );
 
+  const recordSuggestionSignal = useCallback(
+    ({ trigger, reason }) => {
+      if (trigger !== 'manual') return;
+      const api = window.electronAPI;
+      if (!api?.memoryUpsertEvent) return;
+
+      const action = reason === 'refresh' ? 'refresh' : 'manual_generate';
+      const userIdRaw =
+        sessionInfo?.userId ??
+        sessionInfo?.user_id ??
+        sessionInfo?.conversationId ??
+        'local-user';
+      const projectIdRaw =
+        sessionInfo?.projectId ??
+        sessionInfo?.project_id ??
+        sessionInfo?.characterId ??
+        null;
+      const payload = {
+        user_id: String(userIdRaw),
+        event_tip: action === 'refresh' ? '用户刷新建议' : '用户手动生成建议',
+        event_tags: ['suggestion', 'user_feedback', action],
+        profile_delta: {
+          action,
+          trigger,
+          reason,
+          conversation_id: sessionInfo?.conversationId || null,
+          character_id: sessionInfo?.characterId || null,
+          suggestion_count: suggestionConfig?.suggestion_count ?? null,
+          context_message_limit: suggestionConfig?.context_message_limit ?? null,
+          existing_suggestions: Array.isArray(suggestions) ? suggestions.length : 0
+        },
+        timestamp: Date.now()
+      };
+      if (projectIdRaw) {
+        payload.project_id = String(projectIdRaw);
+      }
+
+      api.memoryUpsertEvent(payload).catch((error) => {
+        console.warn('[useSuggestions] memoryUpsertEvent failed', error);
+      });
+    },
+    [sessionInfo, suggestionConfig, suggestions]
+  );
+
   /**
    * 生成建议
    */
@@ -182,6 +226,8 @@ export const useSuggestions = (sessionInfo) => {
       if (suggestionStatus === 'loading' || suggestionStatus === 'streaming') {
         return;
       }
+
+      recordSuggestionSignal({ trigger, reason });
 
       if (window.electronAPI?.startSuggestionStream) {
         startSuggestionStream({ trigger, reason });
@@ -234,7 +280,14 @@ export const useSuggestions = (sessionInfo) => {
         setSuggestionStatus('idle');
       }
     },
-    [sessionInfo, suggestionConfig, suggestionStatus, startSuggestionStream, suggestions]
+    [
+      sessionInfo,
+      suggestionConfig,
+      suggestionStatus,
+      startSuggestionStream,
+      suggestions,
+      recordSuggestionSignal
+    ]
   );
 
   /**
@@ -259,7 +312,7 @@ export const useSuggestions = (sessionInfo) => {
     } catch (err) {
       console.error('复制建议失败：', err);
     }
-  }, []);
+  }, [sessionInfo]);
 
   /**
    * 显式确认“采用了哪个建议”（写入 DB，并在当前 UI 内高亮）
@@ -278,6 +331,44 @@ export const useSuggestions = (sessionInfo) => {
         selectedAt: Date.now()
       });
       if (!ok) return false;
+
+      if (selected) {
+        const api = window.electronAPI;
+        if (api?.memoryUpsertEvent) {
+          const userIdRaw =
+            sessionInfo?.userId ??
+            sessionInfo?.user_id ??
+            sessionInfo?.conversationId ??
+            'local-user';
+          const projectIdRaw =
+            sessionInfo?.projectId ??
+            sessionInfo?.project_id ??
+            sessionInfo?.characterId ??
+            null;
+          const payload = {
+            user_id: String(userIdRaw),
+            event_tip: '用户采用建议',
+            event_tags: ['suggestion', 'user_feedback', 'accept'],
+            profile_delta: {
+              action: 'accept',
+              suggestion_id: suggestion.id,
+              suggestion_index: suggestion.suggestion_index ?? suggestion.index ?? null,
+              decision_point_id: suggestion.decision_point_id ?? null,
+              batch_id: suggestion.batch_id ?? null,
+              conversation_id: sessionInfo?.conversationId || null,
+              character_id: sessionInfo?.characterId || null
+            },
+            timestamp: Date.now()
+          };
+          if (projectIdRaw) {
+            payload.project_id = String(projectIdRaw);
+          }
+
+          api.memoryUpsertEvent(payload).catch((error) => {
+            console.warn('[useSuggestions] memoryUpsertEvent failed', error);
+          });
+        }
+      }
 
       // UI 侧按 batch_id（优先）互斥，保持与 DB 一致
       const scopeBatchId = suggestion.batch_id || null;
@@ -300,7 +391,7 @@ export const useSuggestions = (sessionInfo) => {
       console.error('[useSuggestions] Failed to select suggestion:', err);
       return false;
     }
-  }, []);
+  }, [sessionInfo]);
 
   /**
    * 情景判定（冷场/连发统一交由 LLM 评估）
