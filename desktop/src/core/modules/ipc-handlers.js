@@ -5,12 +5,14 @@ import ASRModelManager from '../../asr/model-manager.js';
 import LLMSuggestionService from './llm-suggestion-service.js';
 import ReviewService from './review-service.js';
 import MemoryService from './memory-service.js';
+import TelemetryService from './telemetry-service.js';
 import { registerWindowHandlers } from './ipc-handlers/window-handlers.js';
 import { registerDatabaseHandlers } from './ipc-handlers/database-handlers.js';
 import { registerLLMHandlers } from './ipc-handlers/llm-handlers.js';
 import { registerSuggestionHandlers } from './ipc-handlers/suggestion-handlers.js';
 import { registerReviewHandlers } from './ipc-handlers/review-handlers.js';
 import { registerMemoryHandlers } from './ipc-handlers/memory-handlers.js';
+import { registerTelemetryHandlers } from './ipc-handlers/telemetry-handlers.js';
 import { registerASRModelHandlers } from './ipc-handlers/asr-model-handlers.js';
 import { registerASRAudioHandlers } from './ipc-handlers/asr-audio-handlers.js';
 import { registerMediaHandlers } from './ipc-handlers/media-handlers.js';
@@ -28,6 +30,7 @@ export class IPCManager {
     this.llmSuggestionService = null;
     this.reviewService = null;
     this.memoryService = null;
+    this.telemetryService = null;
     this.asrModelPreloading = false;
     this.asrModelPreloaded = false;
     this.asrServerCrashCallback = null;
@@ -82,6 +85,15 @@ export class IPCManager {
       this.memoryService = new MemoryService();
     }
   }
+
+  /**
+   * 初始化 Telemetry Service（本地训练信号 JSONL）
+   */
+  initTelemetryService() {
+    if (!this.telemetryService) {
+      this.telemetryService = new TelemetryService();
+    }
+  }
   /**
    * 初始化 Review Service
    */
@@ -102,6 +114,7 @@ export class IPCManager {
     this.initLLMSuggestionService();
     this.initReviewService();
     this.initMemoryService();
+    this.initTelemetryService();
     this.setupWindowHandlers();
     this.setupAppConfigHandlers();
     this.setupDatabaseHandlers();
@@ -109,6 +122,7 @@ export class IPCManager {
     this.setupSuggestionHandlers();
     this.setupReviewHandlers();
     this.setupMemoryHandlers();
+    this.setupTelemetryHandlers();
     this.setupASRModelHandlers();
     this.setupASRAudioHandlers();
     this.setupMediaHandlers();
@@ -184,6 +198,14 @@ export class IPCManager {
   setupMemoryHandlers() {
     this.initMemoryService();
     registerMemoryHandlers({ memoryService: this.memoryService });
+  }
+
+  /**
+   * 设置 Telemetry 相关 IPC 处理器
+   */
+  setupTelemetryHandlers() {
+    this.initTelemetryService();
+    registerTelemetryHandlers({ telemetryService: this.telemetryService });
   }
 
   /**

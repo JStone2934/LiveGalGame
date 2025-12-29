@@ -92,23 +92,58 @@ export const useSuggestions = (sessionInfo) => {
     }
   }, [loadSuggestionConfig]);
 
-  /**
-   * 检查是否可以触发被动建议
-   */
-  const canTriggerPassive = useCallback(() => {
-    if (!suggestionConfig?.enable_passive_suggestion) {
-      console.log('[useSuggestions] Passive suggestion disabled by config');
-      return false;
-    }
-    const cooldownMs = (suggestionConfig?.cooldown_seconds || 15) * 1000;
-    const elapsed = Date.now() - (suggestionCooldownRef.current || 0);
-    return elapsed >= cooldownMs;
-  }, [suggestionConfig]);
-
   const resetStreamState = useCallback((reason = 'unknown') => {
     console.log(`[useSuggestions] resetStreamState called (reason: ${reason}). Clearing active stream:`, activeStreamRef.current);
     activeStreamRef.current = { id: null, trigger: null, reason: null };
   }, [sessionInfo]);
+
+  const trackSuggestionDecision = useCallback(
+    ({
+      decision,
+      trigger,
+      reason,
+      blockReason = null,
+      mode = null,
+      extra = {}
+    }) => {
+      const api = window.electronAPI;
+      if (!api?.telemetryTrack) return;
+
+      const userIdRaw =
+        sessionInfo?.userId ??
+        sessionInfo?.user_id ??
+        sessionInfo?.conversationId ??
+        'local-user';
+      const projectIdRaw =
+        sessionInfo?.projectId ??
+        sessionInfo?.project_id ??
+        sessionInfo?.characterId ??
+        null;
+
+      const payload = {
+        signal: 'suggestion_decision',
+        decision,
+        trigger,
+        reason,
+        block_reason: blockReason,
+        mode,
+        user_id: String(userIdRaw),
+        project_id: projectIdRaw ? String(projectIdRaw) : null,
+        conversation_id: sessionInfo?.conversationId || null,
+        character_id: sessionInfo?.characterId || null,
+        suggestion_count: suggestionConfig?.suggestion_count ?? null,
+        context_message_limit: suggestionConfig?.context_message_limit ?? null,
+        existing_suggestions: Array.isArray(suggestions) ? suggestions.length : 0,
+        timestamp: Date.now(),
+        ...extra
+      };
+
+      api.telemetryTrack(payload).catch((error) => {
+        console.warn('[useSuggestions] telemetryTrack decision failed', error);
+      });
+    },
+    [sessionInfo, suggestionConfig, suggestions]
+  );
 
   const logStreamCharacters = useCallback(() => {
     // Disabled: per-character logging is extremely noisy and can stall the renderer.
@@ -136,6 +171,17 @@ export const useSuggestions = (sessionInfo) => {
       const streamId = `suggestion-stream-${Date.now()}-${Math.random().toString(36).slice(2, 6)}`;
       console.log(`[useSuggestions] Generated streamId: ${streamId}`);
       activeStreamRef.current = { id: streamId, trigger, reason };
+      trackSuggestionDecision({
+        decision: 'show',
+        trigger,
+        reason,
+        mode: 'stream',
+        extra: {
+          stream_id: streamId,
+          decision_point_id: decisionPointId || null,
+          previous_suggestions: previousSuggestions.length || 0
+        }
+      });
 
       console.log('[useSuggestions] Resetting state for new stream');
       setSuggestions([]);
@@ -160,14 +206,14 @@ export const useSuggestions = (sessionInfo) => {
       console.log('[useSuggestions] startSuggestionStream API called successfully');
       return true;
     },
-    [sessionInfo, suggestionConfig, suggestions]
+    [sessionInfo, suggestionConfig, suggestions, trackSuggestionDecision]
   );
 
   const recordSuggestionSignal = useCallback(
     ({ trigger, reason }) => {
       if (trigger !== 'manual') return;
       const api = window.electronAPI;
-      if (!api?.memoryUpsertEvent) return;
+      if (!api?.telemetryTrack) return;
 
       const action = reason === 'refresh' ? 'refresh' : 'manual_generate';
       const userIdRaw =
@@ -181,27 +227,20 @@ export const useSuggestions = (sessionInfo) => {
         sessionInfo?.characterId ??
         null;
       const payload = {
+        signal: action === 'refresh' ? 'suggestion_refresh' : 'suggestion_generate',
+        trigger,
+        reason,
         user_id: String(userIdRaw),
-        event_tip: action === 'refresh' ? '用户刷新建议' : '用户手动生成建议',
-        event_tags: ['suggestion', 'user_feedback', action],
-        profile_delta: {
-          action,
-          trigger,
-          reason,
-          conversation_id: sessionInfo?.conversationId || null,
-          character_id: sessionInfo?.characterId || null,
-          suggestion_count: suggestionConfig?.suggestion_count ?? null,
-          context_message_limit: suggestionConfig?.context_message_limit ?? null,
-          existing_suggestions: Array.isArray(suggestions) ? suggestions.length : 0
-        },
+        project_id: projectIdRaw ? String(projectIdRaw) : null,
+        conversation_id: sessionInfo?.conversationId || null,
+        character_id: sessionInfo?.characterId || null,
+        suggestion_count: suggestionConfig?.suggestion_count ?? null,
+        context_message_limit: suggestionConfig?.context_message_limit ?? null,
+        existing_suggestions: Array.isArray(suggestions) ? suggestions.length : 0,
         timestamp: Date.now()
       };
-      if (projectIdRaw) {
-        payload.project_id = String(projectIdRaw);
-      }
-
-      api.memoryUpsertEvent(payload).catch((error) => {
-        console.warn('[useSuggestions] memoryUpsertEvent failed', error);
+      api.telemetryTrack(payload).catch((error) => {
+        console.warn('[useSuggestions] telemetryTrack failed', error);
       });
     },
     [sessionInfo, suggestionConfig, suggestions]
@@ -215,15 +254,33 @@ export const useSuggestions = (sessionInfo) => {
       // 被动关闭时，直接拒绝触发
       if (trigger === 'passive' && suggestionConfig?.enable_passive_suggestion !== true) {
         console.log('[useSuggestions] Passive suggestion blocked by config');
+        trackSuggestionDecision({
+          decision: 'no_show',
+          trigger,
+          reason,
+          blockReason: 'passive_disabled'
+        });
         return;
       }
 
       if (!sessionInfo?.conversationId || !sessionInfo?.characterId) {
         setSuggestionError('请先选择有效的会话');
+        trackSuggestionDecision({
+          decision: 'no_show',
+          trigger,
+          reason,
+          blockReason: 'invalid_session'
+        });
         return;
       }
 
       if (suggestionStatus === 'loading' || suggestionStatus === 'streaming') {
+        trackSuggestionDecision({
+          decision: 'no_show',
+          trigger,
+          reason,
+          blockReason: 'busy'
+        });
         return;
       }
 
@@ -236,6 +293,12 @@ export const useSuggestions = (sessionInfo) => {
 
       if (!window.electronAPI?.generateLLMSuggestions) {
         setSuggestionError('LLM接口不可用');
+        trackSuggestionDecision({
+          decision: 'no_show',
+          trigger,
+          reason,
+          blockReason: 'llm_unavailable'
+        });
         return;
       }
 
@@ -255,6 +318,16 @@ export const useSuggestions = (sessionInfo) => {
       setSuggestionStatus('loading');
       setSuggestionError('');
       try {
+        trackSuggestionDecision({
+          decision: 'show',
+          trigger,
+          reason,
+          mode: 'sync',
+          extra: {
+            decision_point_id: decisionPointId || null,
+            previous_suggestions: previousSuggestions.length || 0
+          }
+        });
         const result = await window.electronAPI.generateLLMSuggestions({
           conversationId: sessionInfo.conversationId,
           characterId: sessionInfo.characterId,
@@ -286,7 +359,8 @@ export const useSuggestions = (sessionInfo) => {
       suggestionStatus,
       startSuggestionStream,
       suggestions,
-      recordSuggestionSignal
+      recordSuggestionSignal,
+      trackSuggestionDecision
     ]
   );
 
@@ -294,10 +368,37 @@ export const useSuggestions = (sessionInfo) => {
    * 触发被动建议
    */
   const triggerPassiveSuggestion = useCallback((reason) => {
-    if (!canTriggerPassive()) return;
-    if (suggestionStatus === 'streaming') return;
+    if (!suggestionConfig?.enable_passive_suggestion) {
+      trackSuggestionDecision({
+        decision: 'no_show',
+        trigger: 'passive',
+        reason,
+        blockReason: 'passive_disabled'
+      });
+      return;
+    }
+    const cooldownMs = (suggestionConfig?.cooldown_seconds || 15) * 1000;
+    const elapsed = Date.now() - (suggestionCooldownRef.current || 0);
+    if (elapsed < cooldownMs) {
+      trackSuggestionDecision({
+        decision: 'no_show',
+        trigger: 'passive',
+        reason,
+        blockReason: 'cooldown'
+      });
+      return;
+    }
+    if (suggestionStatus === 'streaming') {
+      trackSuggestionDecision({
+        decision: 'no_show',
+        trigger: 'passive',
+        reason,
+        blockReason: 'streaming'
+      });
+      return;
+    }
     handleGenerateSuggestions({ trigger: 'passive', reason });
-  }, [canTriggerPassive, handleGenerateSuggestions, suggestionStatus]);
+  }, [handleGenerateSuggestions, suggestionConfig, suggestionStatus, trackSuggestionDecision]);
 
   /**
    * 复制建议
@@ -334,7 +435,7 @@ export const useSuggestions = (sessionInfo) => {
 
       if (selected) {
         const api = window.electronAPI;
-        if (api?.memoryUpsertEvent) {
+        if (api?.telemetryTrack) {
           const userIdRaw =
             sessionInfo?.userId ??
             sessionInfo?.user_id ??
@@ -346,26 +447,20 @@ export const useSuggestions = (sessionInfo) => {
             sessionInfo?.characterId ??
             null;
           const payload = {
+            signal: 'suggestion_accept',
             user_id: String(userIdRaw),
-            event_tip: '用户采用建议',
-            event_tags: ['suggestion', 'user_feedback', 'accept'],
-            profile_delta: {
-              action: 'accept',
-              suggestion_id: suggestion.id,
-              suggestion_index: suggestion.suggestion_index ?? suggestion.index ?? null,
-              decision_point_id: suggestion.decision_point_id ?? null,
-              batch_id: suggestion.batch_id ?? null,
-              conversation_id: sessionInfo?.conversationId || null,
-              character_id: sessionInfo?.characterId || null
-            },
+            project_id: projectIdRaw ? String(projectIdRaw) : null,
+            conversation_id: sessionInfo?.conversationId || null,
+            character_id: sessionInfo?.characterId || null,
+            suggestion_id: suggestion.id,
+            suggestion_index: suggestion.suggestion_index ?? suggestion.index ?? null,
+            decision_point_id: suggestion.decision_point_id ?? null,
+            batch_id: suggestion.batch_id ?? null,
             timestamp: Date.now()
           };
-          if (projectIdRaw) {
-            payload.project_id = String(projectIdRaw);
-          }
 
-          api.memoryUpsertEvent(payload).catch((error) => {
-            console.warn('[useSuggestions] memoryUpsertEvent failed', error);
+          api.telemetryTrack(payload).catch((error) => {
+            console.warn('[useSuggestions] telemetryTrack failed', error);
           });
         }
       }
@@ -401,10 +496,15 @@ export const useSuggestions = (sessionInfo) => {
       const isTopicChangeDirect = reasonHint === 'topic_change';
       // 话题转折：按产品预期直接生成，无需再走判定模型
       if (isTopicChangeDirect) {
-        if (!sessionInfo?.conversationId || !sessionInfo?.characterId) return;
-        if (!suggestionConfig?.enable_passive_suggestion) return;
-        if (!canTriggerPassive()) return;
-        if (suggestionStatus === 'streaming') return;
+        if (!sessionInfo?.conversationId || !sessionInfo?.characterId) {
+          trackSuggestionDecision({
+            decision: 'no_show',
+            trigger: 'passive',
+            reason: 'topic_change',
+            blockReason: 'invalid_session'
+          });
+          return;
+        }
         triggerPassiveSuggestion('topic_change');
         return;
       }
@@ -415,9 +515,35 @@ export const useSuggestions = (sessionInfo) => {
       if (!detectionEnabled) return;
       if (!sessionInfo?.conversationId || !sessionInfo?.characterId) return;
       if (!window.electronAPI?.detectTopicShift) return;
-      if (!suggestionConfig?.enable_passive_suggestion) return;
-      if (!canTriggerPassive()) return;
-      if (suggestionStatus === 'streaming') return;
+      if (!suggestionConfig?.enable_passive_suggestion) {
+        trackSuggestionDecision({
+          decision: 'no_show',
+          trigger: 'passive',
+          reason: reasonHint,
+          blockReason: 'passive_disabled'
+        });
+        return;
+      }
+      const cooldownMs = (suggestionConfig?.cooldown_seconds || 15) * 1000;
+      const elapsed = Date.now() - (suggestionCooldownRef.current || 0);
+      if (elapsed < cooldownMs) {
+        trackSuggestionDecision({
+          decision: 'no_show',
+          trigger: 'passive',
+          reason: reasonHint,
+          blockReason: 'cooldown'
+        });
+        return;
+      }
+      if (suggestionStatus === 'streaming') {
+        trackSuggestionDecision({
+          decision: 'no_show',
+          trigger: 'passive',
+          reason: reasonHint,
+          blockReason: 'streaming'
+        });
+        return;
+      }
 
       const now = Date.now();
       const silenceBaseTs = lastUserMessageTs ?? lastCharacterMessageTs;
@@ -459,6 +585,18 @@ export const useSuggestions = (sessionInfo) => {
         });
         if (result?.shouldSuggest) {
           triggerPassiveSuggestion('topic_change');
+        } else {
+          trackSuggestionDecision({
+            decision: 'no_show',
+            trigger: 'passive',
+            reason: reasonHint,
+            blockReason: result?.reason || 'situation_llm_reject',
+            extra: {
+              situation_trigger: result?.trigger || null,
+              situation_confidence: result?.confidence ?? null,
+              situation_model: result?.model || null
+            }
+          });
         }
       } catch (err) {
         console.error('情景判定失败：', err);
@@ -472,11 +610,12 @@ export const useSuggestions = (sessionInfo) => {
     [
       suggestionConfig,
       sessionInfo,
-      canTriggerPassive,
       suggestionStatus,
+      lastCharacterMessageTs,
       lastUserMessageTs,
       characterPendingCount,
-      triggerPassiveSuggestion
+      triggerPassiveSuggestion,
+      trackSuggestionDecision
     ]
   );
 

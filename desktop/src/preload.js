@@ -184,6 +184,8 @@ contextBridge.exposeInMainWorld('electronAPI', {
   memoryQueryProfiles: (payload) => ipcRenderer.invoke('memory-query-profiles', payload),
   memoryQueryEvents: (payload) => ipcRenderer.invoke('memory-query-events', payload),
   memoryUpsertEvent: (payload) => ipcRenderer.invoke('memory-upsert-event', payload),
+  // Telemetry (本地训练信号 JSONL)
+  telemetryTrack: (payload) => ipcRenderer.invoke('telemetry-track', payload),
   onSuggestionStreamStart: (callback) => {
     const listener = (event, data) => callback(data);
     ipcRenderer.on('llm-suggestion-stream-start', listener);
