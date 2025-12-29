@@ -2,7 +2,14 @@ import { ipcMain, app } from 'electron';
 import electron from 'electron';
 import path from 'path';
 import fs from 'fs';
-import { getAsrCacheBaseSetting, setAsrCacheBaseSetting, clearAsrCacheBaseSetting } from '../../app-settings.js';
+import {
+  getAsrCacheBaseSetting,
+  setAsrCacheBaseSetting,
+  clearAsrCacheBaseSetting,
+  getSiliconflowApiKeySetting,
+  setSiliconflowApiKeySetting,
+  clearSiliconflowApiKeySetting,
+} from '../../app-settings.js';
 import { applyAsrCacheEnv, computeAsrCachePaths } from '../../../asr/asr-cache-env.js';
 
 function safeHandle(channel, handler) {
@@ -108,6 +115,26 @@ export function registerAppConfigHandlers({ onAsrCacheChanged }) {
     }
 
     return { ok: true, cleared: false, computed };
+  });
+
+  safeHandle('app-get-siliconflow-api-key', () => {
+    const persistedKey = getSiliconflowApiKeySetting();
+    const envKey = process.env.SILICONFLOW_API_KEY || null;
+    const effectiveKey = envKey || persistedKey || '';
+    return { ok: true, apiKey: effectiveKey, hasKey: !!effectiveKey };
+  });
+
+  safeHandle('app-set-siliconflow-api-key', async (_event, apiKeyRaw) => {
+    const trimmed = apiKeyRaw === null || apiKeyRaw === undefined ? '' : String(apiKeyRaw).trim();
+    if (!trimmed) {
+      clearSiliconflowApiKeySetting();
+      delete process.env.SILICONFLOW_API_KEY;
+      return { ok: true, cleared: true };
+    }
+
+    setSiliconflowApiKeySetting(trimmed);
+    process.env.SILICONFLOW_API_KEY = trimmed;
+    return { ok: true, cleared: false };
   });
 
   console.log('App config IPC handlers registered');

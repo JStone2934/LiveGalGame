@@ -247,6 +247,9 @@ contextBridge.exposeInMainWorld('electronAPI', {
   appGetModelCachePaths: () => ipcRenderer.invoke('app-get-model-cache-paths'),
   appSelectDirectory: (options) => ipcRenderer.invoke('app-select-directory', options),
   appSetAsrCacheBase: (cacheBase) => ipcRenderer.invoke('app-set-asr-cache-base', cacheBase),
+  // SiliconFlow API Key 配置
+  appGetSiliconflowApiKey: () => ipcRenderer.invoke('app-get-siliconflow-api-key'),
+  appSetSiliconflowApiKey: (apiKey) => ipcRenderer.invoke('app-set-siliconflow-api-key', apiKey),
   onAsrModelDownloadStarted: (callback) => {
     const listener = (event, payload) => callback(payload);
     ipcRenderer.on('asr-model-download-started', listener);

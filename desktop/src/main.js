@@ -5,7 +5,7 @@ import fs from 'fs';
 import { fileURLToPath } from 'url';
 import { performance } from 'perf_hooks';
 import os from 'os';
-import { getAsrCacheBaseSetting } from './core/app-settings.js';
+import { getAsrCacheBaseSetting, getSiliconflowApiKeySetting } from './core/app-settings.js';
 import { applyAsrCacheEnv } from './asr/asr-cache-env.js';
 
 // 获取 __dirname 的 ESM 等效方式 (提前定义，用于 dotenv 路径)
@@ -197,6 +197,21 @@ function ensureAsrCacheEnv() {
 }
 
 /**
+ * 确保 SiliconFlow API Key 已写入环境变量
+ */
+function ensureSiliconflowApiKeyEnv() {
+  try {
+    if (process.env.SILICONFLOW_API_KEY) return;
+    const persistedKey = getSiliconflowApiKeySetting();
+    if (persistedKey) {
+      process.env.SILICONFLOW_API_KEY = persistedKey;
+    }
+  } catch (error) {
+    console.error('[ASR] Failed to ensure SiliconFlow API key:', error);
+  }
+}
+
+/**
  * ASR事件发射器 - 向所有窗口发送ASR事件
  * @param {string} eventName - 事件名称
  * @param {any} data - 事件数据
@@ -319,6 +334,11 @@ app.whenReady().then(async () => {
   const endEnsureCache = startTimer('ensureAsrCacheEnv');
   ensureAsrCacheEnv();
   endEnsureCache();
+
+  // 确保 SiliconFlow API Key 环境变量
+  const endEnsureSiliconflowKey = startTimer('ensureSiliconflowApiKeyEnv');
+  ensureSiliconflowApiKeyEnv();
+  endEnsureSiliconflowKey();
 
   // 初始化所有管理器
   const endInitManagers = startTimer('initializeManagers');

@@ -32,6 +32,12 @@ export function ASRConfigForm({
               ? `${selectedModelPreset.description} · 推荐: ${selectedModelPreset.recommendedSpec}`
               : '选择模型后可查看详细说明'}
           </p>
+          {selectedModelPreset?.engine === 'siliconflow' && (
+            <div className="mt-2 rounded-lg border border-amber-200 bg-amber-50 p-3 text-xs text-amber-800">
+              SiliconFlow 云端模型使用 TeleAI/TeleSpeechASR，需要先配置 API Key（环境变量{' '}
+              <span className="font-mono">SILICONFLOW_API_KEY</span>），否则无法识别。
+            </div>
+          )}
         </div>
 
         <div>
@@ -135,5 +141,3 @@ export function ASRConfigForm({
     </div>
   );
 }
-
-

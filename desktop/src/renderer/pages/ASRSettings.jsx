@@ -37,6 +37,15 @@ function ASRSettings() {
   const [cacheError, setCacheError] = useState('');
   const [cacheNotice, setCacheNotice] = useState('');
 
+  // SiliconFlow API Key（云端）
+  const [siliconflowApiKey, setSiliconflowApiKey] = useState('');
+  const [siliconflowApiKeyLoading, setSiliconflowApiKeyLoading] = useState(true);
+  const [siliconflowApiKeySaving, setSiliconflowApiKeySaving] = useState(false);
+  const [siliconflowApiKeyError, setSiliconflowApiKeyError] = useState('');
+  const [siliconflowApiKeyNotice, setSiliconflowApiKeyNotice] = useState('');
+  const [siliconflowApiSupported, setSiliconflowApiSupported] = useState(true);
+  const [showSiliconflowApiKey, setShowSiliconflowApiKey] = useState(false);
+
   // 按引擎分组模型
   const modelsByEngine = modelPresets.reduce((acc, preset) => {
     const engine = preset.engine || 'funasr';
@@ -63,6 +72,7 @@ function ASRSettings() {
     loadASRConfigs();
     loadModelData();
     loadCacheInfo();
+    loadSiliconflowApiKey();
 
     const api = window.electronAPI;
     if (!api) {
@@ -257,6 +267,82 @@ function ASRSettings() {
       setCacheError(error?.message || String(error));
     } finally {
       setCacheSaving(false);
+    }
+  };
+
+  const loadSiliconflowApiKey = async () => {
+    const api = window.electronAPI;
+    if (!api?.appGetSiliconflowApiKey) {
+      setSiliconflowApiSupported(false);
+      setSiliconflowApiKeyLoading(false);
+      return;
+    }
+    setSiliconflowApiSupported(true);
+    setSiliconflowApiKeyLoading(true);
+    setSiliconflowApiKeyError('');
+    try {
+      const res = await api.appGetSiliconflowApiKey();
+      if (!res?.ok) {
+        throw new Error(res?.message || '读取 API Key 失败');
+      }
+      setSiliconflowApiKey(res.apiKey || '');
+    } catch (error) {
+      setSiliconflowApiKeyError(error?.message || String(error));
+    } finally {
+      setSiliconflowApiKeyLoading(false);
+    }
+  };
+
+  const handleSaveSiliconflowApiKey = async () => {
+    const api = window.electronAPI;
+    if (!api?.appSetSiliconflowApiKey) {
+      setSiliconflowApiSupported(false);
+      setSiliconflowApiKeyError('当前版本不支持通过 GUI 配置 SiliconFlow API Key');
+      return;
+    }
+    setSiliconflowApiKeySaving(true);
+    setSiliconflowApiKeyError('');
+    setSiliconflowApiKeyNotice('');
+    try {
+      const res = await api.appSetSiliconflowApiKey(siliconflowApiKey);
+      if (!res?.ok) {
+        throw new Error(res?.message || '保存 API Key 失败');
+      }
+      setSiliconflowApiKeyNotice(res?.cleared ? '已清除 API Key。' : '已保存 API Key。');
+      if (api.asrReloadModel) {
+        api.asrReloadModel().catch(() => {});
+      }
+    } catch (error) {
+      setSiliconflowApiKeyError(error?.message || String(error));
+    } finally {
+      setSiliconflowApiKeySaving(false);
+    }
+  };
+
+  const handleClearSiliconflowApiKey = async () => {
+    setSiliconflowApiKey('');
+    const api = window.electronAPI;
+    if (!api?.appSetSiliconflowApiKey) {
+      setSiliconflowApiSupported(false);
+      setSiliconflowApiKeyError('当前版本不支持通过 GUI 配置 SiliconFlow API Key');
+      return;
+    }
+    setSiliconflowApiKeySaving(true);
+    setSiliconflowApiKeyError('');
+    setSiliconflowApiKeyNotice('');
+    try {
+      const res = await api.appSetSiliconflowApiKey('');
+      if (!res?.ok) {
+        throw new Error(res?.message || '清除 API Key 失败');
+      }
+      setSiliconflowApiKeyNotice('已清除 API Key。');
+      if (api.asrReloadModel) {
+        api.asrReloadModel().catch(() => {});
+      }
+    } catch (error) {
+      setSiliconflowApiKeyError(error?.message || String(error));
+    } finally {
+      setSiliconflowApiKeySaving(false);
     }
   };
 
@@ -735,6 +821,86 @@ function ASRSettings() {
           </div>
         </div>
 
+        <div className="mt-4">
+          <div className="rounded-2xl border border-gray-200 bg-white p-5">
+            <div className="flex flex-wrap items-start justify-between gap-3">
+              <div>
+                <h3 className="text-lg font-semibold text-gray-900">SiliconFlow API Key</h3>
+                <p className="text-sm text-gray-600 mt-1">
+                  用于 TeleAI/TeleSpeechASR 云端识别；保存后会自动重载 ASR。
+                </p>
+              </div>
+              <button
+                onClick={loadSiliconflowApiKey}
+                disabled={siliconflowApiKeySaving}
+                className="rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50 disabled:cursor-not-allowed disabled:text-gray-400"
+              >
+                刷新
+              </button>
+            </div>
+
+            {!siliconflowApiSupported ? (
+              <div className="mt-4 rounded-lg border border-amber-200 bg-amber-50 p-3 text-sm text-amber-800">
+                当前版本不支持通过 GUI 配置 SiliconFlow API Key。
+              </div>
+            ) : (
+              <>
+                {siliconflowApiKeyNotice && (
+                  <div className="mt-4 rounded-lg border border-blue-200 bg-blue-50 p-3 text-sm text-blue-800">
+                    {siliconflowApiKeyNotice}
+                  </div>
+                )}
+                {siliconflowApiKeyError && (
+                  <div className="mt-4 rounded-lg border border-red-200 bg-red-50 p-3 text-sm text-red-700">
+                    {siliconflowApiKeyError}
+                  </div>
+                )}
+                {siliconflowApiKeyLoading ? (
+                  <div className="mt-4 text-sm text-gray-600">正在读取 API Key…</div>
+                ) : (
+                  <div className="mt-3 grid gap-3 md:grid-cols-[1fr_auto]">
+                    <div className="relative">
+                      <input
+                        type={showSiliconflowApiKey ? 'text' : 'password'}
+                        placeholder="请输入 SiliconFlow API Key"
+                        value={siliconflowApiKey}
+                        onChange={(e) => setSiliconflowApiKey(e.target.value)}
+                        className="w-full rounded-lg border border-gray-300 px-3 py-2 pr-16 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+                      />
+                      <button
+                        type="button"
+                        onClick={() => setShowSiliconflowApiKey((prev) => !prev)}
+                        className="absolute right-2 top-1/2 -translate-y-1/2 rounded-md px-2 py-1 text-xs text-gray-600 hover:bg-gray-100"
+                      >
+                        {showSiliconflowApiKey ? '隐藏' : '显示'}
+                      </button>
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <button
+                        onClick={handleSaveSiliconflowApiKey}
+                        disabled={siliconflowApiKeySaving}
+                        className="rounded-lg bg-blue-600 px-4 py-2 text-sm font-medium text-white hover:bg-blue-700 disabled:cursor-not-allowed disabled:bg-blue-300"
+                      >
+                        {siliconflowApiKeySaving ? '保存中…' : '保存'}
+                      </button>
+                      <button
+                        onClick={handleClearSiliconflowApiKey}
+                        disabled={siliconflowApiKeySaving}
+                        className="rounded-lg border border-gray-300 px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50 disabled:cursor-not-allowed disabled:text-gray-400"
+                      >
+                        清除
+                      </button>
+                    </div>
+                  </div>
+                )}
+                <div className="mt-2 text-xs text-gray-500">
+                  API Key 会保存在本地设置中，仅用于本机调用云端 ASR。
+                </div>
+              </>
+            )}
+          </div>
+        </div>
+
         {modelsError && (
           <div className="mt-4 rounded-lg border border-red-200 bg-red-50 p-3 text-sm text-red-700">
             {modelsError}
@@ -844,6 +1010,7 @@ function ASRSettings() {
                   <div className="mt-1 text-sm text-green-700 space-y-1">
                     <p>• 无需下载模型文件，不占用本地算力。</p>
                     <p>• 依赖网络连接，可能会有轻微的网络延迟。</p>
+                    <p>• SiliconFlow 云端模型使用 TeleAI/TeleSpeechASR，请先配置 API Key（SILICONFLOW_API_KEY）。</p>
                   </div>
                 </div>
               </div>

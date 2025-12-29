@@ -23,3 +23,21 @@ export function clearAsrCacheBaseSetting() {
   store.delete('asr.cacheBase');
 }
 
+export function getSiliconflowApiKeySetting() {
+  const value = store.get('asr.siliconflowApiKey');
+  return typeof value === 'string' && value.trim() ? value : null;
+}
+
+export function setSiliconflowApiKeySetting(apiKey) {
+  if (apiKey === null || apiKey === undefined || String(apiKey).trim() === '') {
+    store.delete('asr.siliconflowApiKey');
+    return null;
+  }
+  const normalized = String(apiKey).trim();
+  store.set('asr.siliconflowApiKey', normalized);
+  return normalized;
+}
+
+export function clearSiliconflowApiKeySetting() {
+  store.delete('asr.siliconflowApiKey');
+}
