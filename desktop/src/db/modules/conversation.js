@@ -7,11 +7,11 @@ export default function ConversationManager(BaseClass) {
     const now = Date.now();
 
     const stmt = this.db.prepare(`
-      INSERT INTO conversations (id, character_id, title, date, affinity_change, summary, tags, created_at, updated_at)
+      INSERT OR IGNORE INTO conversations (id, character_id, title, date, affinity_change, summary, tags, created_at, updated_at)
       VALUES (@id, @character_id, @title, @date, @affinity_change, @summary, @tags, @created_at, @updated_at)
     `);
 
-    stmt.run({
+    const info = stmt.run({
       id,
       character_id: conversationData.character_id,
       title: conversationData.title || null,
@@ -22,6 +22,10 @@ export default function ConversationManager(BaseClass) {
       created_at: now,
       updated_at: now
     });
+
+    if (info.changes === 0) {
+      return this.getConversationById(id);
+    }
 
     return this.getConversationById(id);
   }

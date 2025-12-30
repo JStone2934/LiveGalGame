@@ -2,60 +2,10 @@ import { app, BrowserWindow, desktopCapturer } from 'electron';
 import { initMain as initAudioLoopback } from 'electron-audio-loopback';
 import path from 'path';
 import fs from 'fs';
-import { fileURLToPath } from 'url';
 import { performance } from 'perf_hooks';
 import os from 'os';
 import { getAsrCacheBaseSetting, getSiliconflowApiKeySetting } from './core/app-settings.js';
-import { applyAsrCacheEnv } from './asr/asr-cache-env.js';
-
-// 获取 __dirname 的 ESM 等效方式 (提前定义，用于 dotenv 路径)
-const __filename_early = fileURLToPath(import.meta.url);
-const __dirname_early = path.dirname(__filename_early);
-
-// 手动加载 .env 文件（Electron 主进程不会自动加载）
-function loadDotEnv() {
-  // 尝试多个可能的 .env 文件位置
-  const possiblePaths = [
-    path.resolve(__dirname_early, '..', '..', '.env'),  // desktop/.env
-    path.resolve(__dirname_early, '..', '.env'),        // desktop/src/.env (fallback)
-    path.resolve(process.cwd(), '.env'),                // 当前工作目录
-  ];
-
-  for (const envPath of possiblePaths) {
-    if (fs.existsSync(envPath)) {
-      try {
-        const content = fs.readFileSync(envPath, 'utf-8');
-        const lines = content.split('\n');
-        for (const line of lines) {
-          const trimmed = line.trim();
-          // 跳过空行和注释
-          if (!trimmed || trimmed.startsWith('#')) continue;
-          // 解析 KEY=VALUE
-          const eqIndex = trimmed.indexOf('=');
-          if (eqIndex > 0) {
-            const key = trimmed.slice(0, eqIndex).trim();
-            let value = trimmed.slice(eqIndex + 1).trim();
-            // 移除引号
-            if ((value.startsWith('"') && value.endsWith('"')) ||
-                (value.startsWith("'") && value.endsWith("'"))) {
-              value = value.slice(1, -1);
-            }
-            // 不覆盖已存在的环境变量
-            if (!process.env[key]) {
-              process.env[key] = value;
-            }
-          }
-        }
-        console.log(`[ENV] Loaded .env from: ${envPath}`);
-        return true;
-      } catch (err) {
-        console.warn(`[ENV] Failed to load ${envPath}:`, err.message);
-      }
-    }
-  }
-  console.warn('[ENV] No .env file found');
-  return false;
-}
+import { initAppEnv, loadDotEnv } from './config/env.js';
 
 // 在最早的时机加载环境变量
 loadDotEnv();
@@ -183,31 +133,17 @@ function attachMainWindowPerf(mainWindow) {
   mainWindow.webContents.once('did-finish-load', () => endDidFinishLoad());
 }
 
-/**
- * 确保 ASR 缓存环境变量
- */
-function ensureAsrCacheEnv() {
+// 使用统一的环境配置入口
+function ensureAppEnv() {
   try {
-    const userData = app.getPath('userData');
-    const persistedBase = process.env.ASR_CACHE_BASE ? null : getAsrCacheBaseSetting();
-    applyAsrCacheEnv({ userDataDir: userData, asrCacheBase: process.env.ASR_CACHE_BASE || persistedBase });
+    initAppEnv({
+      userDataDir: app.getPath('userData'),
+      getAsrCacheBaseSetting,
+      getSiliconflowApiKeySetting,
+      logger: console
+    });
   } catch (error) {
-    console.error('[ASR] Failed to ensure cache directories:', error);
-  }
-}
-
-/**
- * 确保 SiliconFlow API Key 已写入环境变量
- */
-function ensureSiliconflowApiKeyEnv() {
-  try {
-    if (process.env.SILICONFLOW_API_KEY) return;
-    const persistedKey = getSiliconflowApiKeySetting();
-    if (persistedKey) {
-      process.env.SILICONFLOW_API_KEY = persistedKey;
-    }
-  } catch (error) {
-    console.error('[ASR] Failed to ensure SiliconFlow API key:', error);
+    console.error('[ENV] Failed to initialize app env:', error);
   }
 }
 
@@ -249,17 +185,8 @@ function initializeManagers() {
   shortcutManager = new ShortcutManager(windowManager);
 
   // 创建 ASR 预加载器
-  asrPreloader = new ASRPreloader(ipcManager);
+  asrPreloader = new ASRPreloader(ipcManager.getASRRuntime());
   asrPreloader.setASREventEmitter(emitASREvent);
-  asrPreloader.setServerCrashCallback((exitCode) => {
-    console.error(`[ASR] 服务器崩溃 (code: ${exitCode})`);
-
-    // 通知所有窗口服务器崩溃
-    const windows = BrowserWindow.getAllWindows();
-    windows.forEach(window => {
-      window.webContents.send('asr-server-crashed', { exitCode });
-    });
-  });
 
   // 创建权限管理器
   permissionManager = new PermissionManager();
@@ -331,14 +258,9 @@ app.whenReady().then(async () => {
   const endAppReadyPipeline = startTimer('app.whenReady pipeline');
 
   // 确保 ASR 缓存环境
-  const endEnsureCache = startTimer('ensureAsrCacheEnv');
-  ensureAsrCacheEnv();
-  endEnsureCache();
-
-  // 确保 SiliconFlow API Key 环境变量
-  const endEnsureSiliconflowKey = startTimer('ensureSiliconflowApiKeyEnv');
-  ensureSiliconflowApiKeyEnv();
-  endEnsureSiliconflowKey();
+  const endEnsureEnv = startTimer('ensureAppEnv');
+  ensureAppEnv();
+  endEnsureEnv();
 
   // 初始化所有管理器
   const endInitManagers = startTimer('initializeManagers');
@@ -373,7 +295,7 @@ app.whenReady().then(async () => {
 
   // 预加载ASR模型（后台进行，不阻塞UI）
   const endPreloadASR = startTimer('asrPreloader.preload (async)');
-  asrPreloader.preload(() => ipcManager.checkASRReady())
+  asrPreloader.preload()
     .then(() => endPreloadASR())
     .catch(err => {
       console.error('[ASR] 预加载失败，将在使用时加载:', err);

@@ -1,7 +1,7 @@
 import { ipcMain, systemPreferences } from 'electron';
 import DatabaseManager from '../../db/database.js';
-import ASRManager from '../../asr/asr-manager.js';
 import ASRModelManager from '../../asr/model-manager.js';
+import { ASRRuntimeManager } from '../../asr/asr-runtime-manager.js';
 import LLMSuggestionService from './llm-suggestion-service.js';
 import ReviewService from './review-service.js';
 import MemoryService from './memory-service.js';
@@ -26,14 +26,13 @@ export class IPCManager {
     this.windowManager = windowManager;
     this.db = null;
     this.modelManager = null;
-    this.asrManager = null;
     this.llmSuggestionService = null;
     this.reviewService = null;
     this.memoryService = null;
     this.telemetryService = null;
-    this.asrModelPreloading = false;
-    this.asrModelPreloaded = false;
-    this.asrServerCrashCallback = null;
+    this.asrRuntime = new ASRRuntimeManager({
+      getDb: () => this.db
+    });
   }
 
   /**
@@ -41,13 +40,23 @@ export class IPCManager {
    */
   setASREventEmitter(emitASREvent) {
     this.emitASREvent = emitASREvent;
+    this.asrRuntime.setEventEmitter(emitASREvent);
   }
 
   /**
    * 设置服务器崩溃回调
    */
   setASRServerCrashCallback(callback) {
-    this.asrServerCrashCallback = callback;
+    if (callback) {
+      this.asrRuntime.addServerCrashListener(callback);
+    }
+  }
+
+  /**
+   * 获取 ASR 运行时管理器
+   */
+  getASRRuntime() {
+    return this.asrRuntime;
   }
 
   /**
@@ -252,139 +261,42 @@ export class IPCManager {
    * 获取或创建 ASR 管理器
    */
   getOrCreateASRManager() {
-    if (!this.asrManager) {
-      this.initDatabase();
-      this.asrManager = new ASRManager(this.db);
-      this.asrManager.setEventEmitter(this.emitASREvent);
-
-      // 设置服务器崩溃回调
-      this.asrManager.setServerCrashCallback((exitCode) => {
-        console.error(`[ASR] 服务器崩溃 (code: ${exitCode})，重置预加载状态`);
-        this.asrModelPreloaded = false;
-        this.asrModelPreloading = false;
-
-        if (this.asrServerCrashCallback) {
-          this.asrServerCrashCallback(exitCode);
-        }
-      });
-    }
-    return this.asrManager;
+    this.initDatabase();
+    return this.asrRuntime.getOrCreateASRManager();
   }
 
   /**
    * 检查 ASR 模型是否就绪
    */
   async checkASRReady() {
-    const isDownloading = this.asrManager?.whisperService?.isDownloading === true;
-
-    if (isDownloading) {
-      return {
-        ready: false,
-        message: '正在下载语音模型，首次下载可能较慢，请耐心等待...',
-        downloading: true
-      };
-    }
-
-    if (this.asrModelPreloading) {
-      return {
-        ready: false,
-        message: 'ASR模型正在预加载中...',
-        preloading: true
-      };
-    }
-
-    if (this.asrModelPreloaded && this.asrManager && this.asrManager.isInitialized) {
-      return {
-        ready: true,
-        message: 'ASR模型已就绪',
-        preloaded: true
-      };
-    }
-
-    if (this.asrManager && !this.asrManager.isInitialized) {
-      return {
-        ready: false,
-        message: 'ASR模型正在初始化...',
-        initializing: true
-      };
-    }
-
-    if (!this.asrManager) {
-      return {
-        ready: false,
-        message: 'ASR模型未加载，请稍候...',
-        notStarted: true
-      };
-    }
-
-    return {
-      ready: false,
-      message: 'ASR模型状态未知'
-    };
+    return this.asrRuntime.checkReady();
   }
 
   /**
    * 重新加载 ASR 模型
    */
   async reloadASRModel() {
-    console.log('[ASR] 重新加载 ASR 模型');
-    this.asrModelPreloading = true;
-    if (this.asrManager) {
-      try {
-        await this.asrManager.stop();
-      } catch (error) {
-        console.warn('[ASR] 停止现有 ASR 任务失败:', error);
-      }
-      try {
-        this.asrManager.destroy();
-      } catch (error) {
-        console.warn('[ASR] 销毁 ASR 管理器失败:', error);
-      }
-      this.asrManager = null;
-    }
-
-    // 重新创建并初始化，确保新后端立即拉起
-    try {
-      const asrManager = this.getOrCreateASRManager();
-      await asrManager.initialize(null);
-      this.asrModelPreloaded = true;
-    } catch (error) {
-      console.error('[ASR] 重新加载并初始化 ASR 模型失败:', error);
-      this.asrModelPreloaded = false;
-      throw error;
-    } finally {
-      this.asrModelPreloading = false;
-    }
+    await this.asrRuntime.reload();
   }
 
   /**
    * 获取 ASR 预加载状态
    */
   getASRPreloadState() {
-    return {
-      preloading: this.asrModelPreloading,
-      preloaded: this.asrModelPreloaded
-    };
+    return this.asrRuntime.getPreloadState();
   }
 
   /**
    * 设置 ASR 预加载状态
    */
   setASRPreloadState(preloading, preloaded) {
-    this.asrModelPreloading = preloading;
-    this.asrModelPreloaded = preloaded;
+    this.asrRuntime.setPreloadState(preloading, preloaded);
   }
 
   /**
    * 清理资源
    */
   cleanup() {
-    if (this.asrManager) {
-      try {
-        this.asrManager.destroy();
-      } catch (error) {
-        console.error('Error destroying ASR manager:', error);
-      }
-    }
+    this.asrRuntime.cleanup();
   }
 }

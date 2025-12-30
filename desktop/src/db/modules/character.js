@@ -3,23 +3,29 @@ export default function CharacterManager(BaseClass) {
     // 创建角色
     createCharacter(characterData) {
     const stmt = this.db.prepare(`
-      INSERT INTO characters (id, name, nickname, relationship_label, avatar_color, affinity, created_at, updated_at, notes)
+      INSERT OR IGNORE INTO characters (id, name, nickname, relationship_label, avatar_color, affinity, created_at, updated_at, notes)
       VALUES (@id, @name, @nickname, @relationship_label, @avatar_color, @affinity, @created_at, @updated_at, @notes)
     `);
 
     // 在 TEXT 主键表上 lastInsertRowid 不可用于取回 ID，必须使用实际写入的 id
     const id = characterData.id || this.generateId();
-    stmt.run({
+    const info = stmt.run({
       id,
       name: characterData.name,
       nickname: characterData.nickname || null,
       relationship_label: characterData.relationship_label || null,
       avatar_color: characterData.avatar_color || '#ff6b6b',
-      affinity: characterData.affinity || 50,
+      // 允许合法的 0 值，不要用 || 覆盖
+      affinity: characterData.affinity ?? 50,
       created_at: Date.now(),
       updated_at: Date.now(),
       notes: characterData.notes || null
     });
+
+    // 如果因主键重复未插入，直接返回已有记录避免抛错
+    if (info.changes === 0) {
+      return this.getCharacterById(id);
+    }
 
     return this.getCharacterById(id);
   }

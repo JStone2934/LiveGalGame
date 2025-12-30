@@ -691,30 +691,47 @@ function ASRSettings() {
 
       // 确保测试角色存在
       try {
-        await api.createCharacter({
-          id: 'asr-test-character',
-          name: 'ASR 测试角色',
-          nickname: '测试',
-          affinity: 50,
-          created_at: Date.now(),
-          updated_at: Date.now()
-        });
+        const existingChar = await api.dbGetCharacterById?.('asr-test-character');
+        if (!existingChar) {
+          await api.createCharacter({
+            id: 'asr-test-character',
+            name: 'ASR 测试角色',
+            nickname: '测试',
+            affinity: 50,
+            created_at: Date.now(),
+            updated_at: Date.now()
+          });
+        }
       } catch {
         // 角色可能已存在，忽略错误
       }
 
       // 创建一个临时对话，便于把识别结果保存/回显
-      const conversation = await api.dbCreateConversation({
-        id: 'asr-settings-test',
-        character_id: 'asr-test-character',
-        title: 'ASR 测试',
-        date: Date.now(),
-        affinity_change: 0,
-        summary: 'ASR 设置页测试会话',
-        tags: null,
-        created_at: Date.now(),
-        updated_at: Date.now()
-      });
+      let conversation = null;
+      const existingList = await api.dbGetConversationsByCharacter?.('asr-test-character');
+      const existing = existingList?.find?.((c) => c.id === 'asr-settings-test');
+      if (existing) {
+        conversation = existing;
+      } else {
+        try {
+          conversation = await api.dbCreateConversation({
+            id: 'asr-settings-test',
+            character_id: 'asr-test-character',
+            title: 'ASR 测试',
+            date: Date.now(),
+            affinity_change: 0,
+            summary: 'ASR 设置页测试会话',
+            tags: null,
+            created_at: Date.now(),
+            updated_at: Date.now()
+          });
+        } catch {
+          // 再次兜底：如果插入失败，尝试重新查询
+          const fallbackList = await api.dbGetConversationsByCharacter?.('asr-test-character');
+          conversation = fallbackList?.find?.((c) => c.id === 'asr-settings-test') || null;
+        }
+      }
+
       testConversationId = conversation?.id || 'asr-settings-test';
 
       // 1) 检查模型就绪

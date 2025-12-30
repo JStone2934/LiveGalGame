@@ -4,9 +4,9 @@
  * ASR 预加载器 - 负责在应用启动时预加载 ASR 模型
  */
 export class ASRPreloader {
-  constructor(ipcManager) {
-    this.ipcManager = ipcManager;
-    // 不再维护独立的 asrManager 实例，而是使用 ipcManager 中的实例
+  constructor(asrRuntimeManager) {
+    this.asrRuntime = asrRuntimeManager;
+    // 不再维护独立的 asrManager 实例，而是使用统一的运行时管理器
   }
 
   /**
@@ -14,6 +14,9 @@ export class ASRPreloader {
    */
   setASREventEmitter(emitASREvent) {
     this.emitASREvent = emitASREvent;
+    if (this.asrRuntime) {
+      this.asrRuntime.setEventEmitter(emitASREvent);
+    }
   }
 
   /**
@@ -21,50 +24,26 @@ export class ASRPreloader {
    */
   setServerCrashCallback(callback) {
     this.serverCrashCallback = callback;
+    if (this.asrRuntime && callback) {
+      this.asrRuntime.addServerCrashListener(callback);
+    }
   }
 
   /**
    * 预加载 ASR 模型（应用启动时进行）
-   * @param {Function} checkCallback - 检查回调函数
    */
-  async preload(checkCallback) {
-    const state = this.ipcManager.getASRPreloadState();
+  async preload() {
+    const state = this.asrRuntime.getPreloadState();
 
     if (state.preloading || state.preloaded) {
       return;
     }
 
     try {
-      this.ipcManager.setASRPreloadState(true, false);
-      console.log('[ASR] 开始预加载ASR模型...');
-
-      // 获取或创建共享的 ASRManager 实例
-      const asrManager = this.ipcManager.getOrCreateASRManager();
-
-      // 设置事件发射器
-      if (this.emitASREvent) {
-        asrManager.setEventEmitter(this.emitASREvent);
-      }
-
-      // 设置服务器崩溃回调
-      // 注意：这会覆盖 IPCManager 中设置的回调，但逻辑是兼容的
-      asrManager.setServerCrashCallback((exitCode) => {
-        console.error(`[ASR] 服务器崩溃 (code: ${exitCode})，重置预加载状态`);
-        this.ipcManager.setASRPreloadState(false, false);
-
-        if (this.serverCrashCallback) {
-          this.serverCrashCallback(exitCode);
-        }
-      });
-
-      // 只初始化模型，不设置conversationId（因为还没有对话）
-      await asrManager.initialize(null);
-
-      this.ipcManager.setASRPreloadState(false, true);
-      console.log('[ASR] ASR模型预加载完成');
+      await this.asrRuntime.preload();
     } catch (error) {
       console.error('[ASR] 预加载ASR模型失败:', error);
-      this.ipcManager.setASRPreloadState(false, false);
+      this.asrRuntime.setPreloadState(false, false);
       // 预加载失败不影响应用启动，后续使用时再加载
     }
   }
@@ -76,7 +55,7 @@ export class ASRPreloader {
     console.log('[ASR] 重新加载 ASR 模型');
 
     // 使用 IPCManager 清理现有实例
-    await this.ipcManager.reloadASRModel();
+    await this.asrRuntime.reload();
 
     // 重新预加载
     await this.preload();

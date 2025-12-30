@@ -18,12 +18,30 @@ import platform
 import sys
 import time
 import traceback
-import base64
 import copy
-from dataclasses import dataclass, field
 from typing import Dict, List, Optional
 
+from lib.ipc import send_ipc_message, set_ipc_channel
+from lib.device import (
+    GPUConfig,
+    detect_onnx_device,
+    detect_gpu as detect_gpu_external,
+)
+from lib.cache import (
+    resolve_local_model_path,
+    ensure_vad_compatibility,
+    ensure_asr_compatibility,
+    ensure_punc_yaml,
+)
+from lib.config import load_runtime_config, log_runtime_config
+
 import numpy as np
+from lib.runtime import (
+    SessionState,
+    smart_concat,
+    smart_split_sentences,
+    decode_audio_chunk,
+)
 
 # ==============================================================================
 # OS 级别的文件描述符重定向
@@ -32,17 +50,7 @@ ipc_fd = os.dup(sys.stdout.fileno())
 ipc_channel = os.fdopen(ipc_fd, "w", buffering=1, encoding="utf-8")
 os.dup2(sys.stderr.fileno(), sys.stdout.fileno())
 sys.stdout = sys.stderr
-
-
-def send_ipc_message(data):
-    """发送 JSON 消息到 Node.js"""
-    try:
-        json_str = json.dumps(data, ensure_ascii=False)
-        ipc_channel.write(json_str + "\n")
-        ipc_channel.flush()
-    except Exception as exc:
-        sys.stderr.write(f"[IPC Error] Failed to send: {exc}\n")
-        sys.stderr.flush()
+set_ipc_channel(ipc_channel)
 
 
 # ==============================================================================
@@ -50,16 +58,18 @@ def send_ipc_message(data):
 # ==============================================================================
 os.environ.setdefault("TQDM_DISABLE", "1")
 
-# 【并发修复】Worker ID 用于日志区分，每个音频源有独立的 Worker 进程
-WORKER_ID = os.environ.get("FUNASR_WORKER_ID", "default")
-
 MODELSCOPE_CACHE = os.environ.get("MODELSCOPE_CACHE") or os.environ.get("ASR_CACHE_DIR")
 if MODELSCOPE_CACHE:
     os.environ.setdefault("MODELSCOPE_CACHE", MODELSCOPE_CACHE)
     os.environ.setdefault("MODELSCOPE_CACHE_HOME", MODELSCOPE_CACHE)
 
+runtime_config = load_runtime_config()
+
+# 【并发修复】Worker ID 用于日志区分，每个音频源有独立的 Worker 进程
+WORKER_ID = runtime_config.worker_id
+
 # 离线模式：如果设置了 MODELSCOPE_OFFLINE=1，则跳过网络请求，直接使用本地缓存
-OFFLINE_MODE = os.environ.get("MODELSCOPE_OFFLINE", "").lower() in ("1", "true", "yes")
+OFFLINE_MODE = runtime_config.offline_mode
 if OFFLINE_MODE:
     sys.stderr.write("[FunASR Worker] Offline mode enabled: using local cache only\n")
     sys.stderr.flush()
@@ -86,156 +96,25 @@ if OFFLINE_MODE:
 # ==============================================================================
 # FunASR 配置
 # ==============================================================================
-SAMPLE_RATE = int(os.environ.get("ASR_SAMPLE_RATE", "16000"))
-CHUNK_MS = int(os.environ.get("ASR_CHUNK_MS", "200"))  # 每次读取的音频块时长 (毫秒)
+SAMPLE_RATE = runtime_config.sample_rate
+CHUNK_MS = runtime_config.chunk_ms  # 每次读取的音频块时长 (毫秒)
 CHUNK_SAMPLES = int(SAMPLE_RATE * CHUNK_MS / 1000)
 
 # 静音检测配置
-SILENCE_THRESHOLD_CHUNKS = int(os.environ.get("ASR_SILENCE_CHUNKS", "3"))  # 连续静音块数触发句尾
-SILENCE_BUFFER_KEEP = 2  # 保留多少个静音块让音频更自然
+SILENCE_THRESHOLD_CHUNKS = runtime_config.silence_threshold_chunks  # 连续静音块数触发句尾
+SILENCE_BUFFER_KEEP = runtime_config.silence_buffer_keep  # 保留多少个静音块让音频更自然
 
 # 分句配置
 SENTENCE_END_PUNCTUATION = set("。！？!?.；;")
-MIN_SENTENCE_CHARS = int(os.environ.get("MIN_SENTENCE_CHARS", "2"))
+MIN_SENTENCE_CHARS = runtime_config.min_sentence_chars
 
-# 推理设备选择（影响本地 FunASR ONNX 模型：VAD/Online/Offline/Punc）
-# - auto: 自动选择（优先 CUDA，其次 ROCm，其次 DirectML，最后 CPU）
-# - cpu/cuda/rocm/dml: 强制指定
-ASR_DEVICE = os.environ.get("ASR_DEVICE", "auto").strip().lower()
-ASR_DEVICE_ID = int(os.environ.get("ASR_DEVICE_ID", "0"))
+ASR_DEVICE, ASR_DEVICE_ID = runtime_config.asr_device, runtime_config.asr_device_id
 
+log_runtime_config(runtime_config)
 
-@dataclass
-class GPUConfig:
-    """
-    兼容历史测试脚本的 GPU 配置对象。
-
-    - device_type: cpu/cuda/rocm/dml
-    - provider_name: onnxruntime provider 名称（如 DmlExecutionProvider）
-    - available: 是否启用 GPU
-    - device_id: GPU 设备 id（CPU 时为 -1）
-    - providers: 可用 providers 列表（调试用）
-    """
-
-    device_type: str = "cpu"
-    provider_name: str = "CPUExecutionProvider"
-    available: bool = False
-    device_id: int = -1
-    providers: List[str] = field(default_factory=list)
-
-
-def detect_onnx_device() -> dict:
-    """
-    检测 onnxruntime 可用 provider，并选择推理设备。
-
-    说明：
-    - funasr_onnx 的模型构造函数一般通过 device_id 控制：-1 为 CPU；>=0 尝试使用 GPU。
-    - 实际走哪种 GPU 取决于安装的 onnxruntime 版本提供的 provider：
-      * CUDAExecutionProvider (onnxruntime-gpu) -> NVIDIA
-      * ROCMExecutionProvider (onnxruntime-rocm) -> AMD/ROCm
-      * DmlExecutionProvider (onnxruntime-directml) -> Windows 上 AMD/NVIDIA/Intel
-    """
-    forced = ASR_DEVICE
-    device_id = ASR_DEVICE_ID
-
-    try:
-        import onnxruntime as ort  # type: ignore
-
-        providers = ort.get_available_providers() or []
-    except Exception:
-        providers = []
-
-    providers_set = {p.lower(): p for p in providers}
-    has_cuda = "cudaexecutionprovider" in providers_set
-    has_rocm = "rocmexecutionprovider" in providers_set
-    has_dml = "dmlexecutionprovider" in providers_set
-
-    def _cpu():
-        return {
-            "device": "cpu",
-            "device_id": -1,
-            "provider": "CPUExecutionProvider",
-            "providers": providers,
-        }
-
-    def _gpu(provider_key: str, device: str):
-        return {
-            "device": device,
-            "device_id": device_id,
-            "provider": providers_set.get(provider_key, provider_key),
-            "providers": providers,
-        }
-
-    if forced in ("cpu", "none", "off", "-1"):
-        return _cpu()
-    if forced in ("cuda", "nvidia"):
-        return _gpu("cudaexecutionprovider", "cuda") if has_cuda else _cpu()
-    if forced in ("rocm", "amd"):
-        return _gpu("rocmexecutionprovider", "rocm") if has_rocm else _cpu()
-    if forced in ("dml", "directml"):
-        return _gpu("dmlexecutionprovider", "dml") if has_dml else _cpu()
-
-    # auto：按优先级选择（CUDA > ROCm > DirectML > CPU）
-    if has_cuda:
-        return _gpu("cudaexecutionprovider", "cuda")
-    if has_rocm:
-        return _gpu("rocmexecutionprovider", "rocm")
-    if has_dml:
-        return _gpu("dmlexecutionprovider", "dml")
-    return _cpu()
-
-
-def detect_gpu() -> GPUConfig:
-    """
-    兼容接口：返回 GPUConfig，供 test_funasr_gpu.py 等脚本调用。
-    """
-    info = detect_onnx_device()
-    device = str(info.get("device", "cpu"))
-    device_id = int(info.get("device_id", -1))
-    provider = str(info.get("provider", "CPUExecutionProvider"))
-    providers = list(info.get("providers") or [])
-    available = device_id >= 0 and provider != "CPUExecutionProvider"
-    return GPUConfig(
-        device_type=device,
-        provider_name=provider,
-        available=available,
-        device_id=device_id,
-        providers=providers,
-    )
-
-
-def smart_concat(history: str, new_text: str) -> str:
-    """
-    智能拼接流式文本：处理增量、全量、重叠等情况。
-    """
-    if not new_text:
-        return history
-    if not history:
-        return new_text
-    
-    # 1. 检查 new_text 是否完全包含 history (说明 new_text 是全量更新)
-    if new_text.startswith(history):
-        return new_text
-        
-    # 2. 检查 history 是否完全包含 new_text (说明 new_text 是旧的全量或者是重复输出)
-    if history.endswith(new_text):
-        return history
-        
-    # 3. 检查重叠 (history后缀 与 new_text前缀)
-    overlap_len = min(len(history), len(new_text))
-    for i in range(overlap_len, 0, -1):
-        if history.endswith(new_text[:i]):
-            return history + new_text[i:]
-            
-    # 4. 无重叠，直接拼接
-    return history + new_text
-
-
-def decode_audio_chunk(audio_b64: str) -> np.ndarray:
-    """Base64 音频转 float32 numpy array（范围 -1~1）。"""
-    audio_bytes = base64.b64decode(audio_b64)
-    audio_int16 = np.frombuffer(audio_bytes, dtype=np.int16)
-    return audio_int16.astype(np.float32)  # funasr_onnx 接受 float32，不除以 32768
+# 保持历史接口：对外仍可从本模块调用 detect_gpu()
+def detect_gpu() -> "GPUConfig":
+    return detect_gpu_external(ASR_DEVICE, ASR_DEVICE_ID)
 
 
 def _clone_online_model_with_isolated_frontend(asr_online_template):
@@ -292,146 +171,6 @@ def _clone_online_model_with_isolated_frontend(asr_online_template):
     return model
 
 
-def smart_split_sentences(text: str) -> List[str]:
-    """
-    智能分句：基于标点符号将长文本切分成自然的句子。
-    
-    策略：
-    1. 优先按句末标点（。！？!?.）分割
-    2. 如果分隔后的句子太短，考虑合并
-    3. 如果没有句末标点，返回原文
-    """
-    if not text or len(text) < MIN_SENTENCE_CHARS:
-        return [text] if text else []
-    
-    # 定义句末标点
-    sentence_endings = "。！？!?."
-    
-    sentences = []
-    current_sentence = ""
-    
-    for char in text:
-        current_sentence += char
-        if char in sentence_endings:
-            trimmed = current_sentence.strip()
-            if trimmed and len(trimmed) >= MIN_SENTENCE_CHARS:
-                sentences.append(trimmed)
-            elif trimmed and sentences:
-                # 太短的句子合并到上一句
-                sentences[-1] += trimmed
-            elif trimmed:
-                sentences.append(trimmed)
-            current_sentence = ""
-    
-    # 处理剩余的文本
-    remaining = current_sentence.strip()
-    if remaining:
-        if len(remaining) < MIN_SENTENCE_CHARS and sentences:
-            # 太短就合并到上一句
-            sentences[-1] += remaining
-        else:
-            sentences.append(remaining)
-    
-    return sentences if sentences else [text]
-
-
-
-@dataclass
-class SessionState:
-    """
-    FunASR 2-Pass 会话状态
-    """
-    # 音频缓冲区 (给 Pass 2 用)
-    full_sentence_buffer: List[np.ndarray] = field(default_factory=list)
-    
-    # Pass 1 流式模型的上下文缓存
-    online_cache: Dict = field(default_factory=dict)
-    
-    # 静音检测
-    silence_counter: int = 0
-    is_speaking: bool = False
-    
-    # 累积的流式文本
-    streaming_text: str = ""
-    last_sent_text: str = ""
-    
-    # 时间戳
-    start_time: float = 0.0
-    
-    def reset(self):
-        """重置会话状态"""
-        self.full_sentence_buffer.clear()
-        self.online_cache.clear()
-        self.silence_counter = 0
-        self.is_speaking = False
-        self.streaming_text = ""
-        self.last_sent_text = ""
-        self.start_time = 0.0
-
-
-def resolve_local_model_path(model_id: str, require_offline_mode: bool = True) -> Optional[str]:
-    """
-    解析本地模型路径。
-    检查 MODELSCOPE_CACHE 和默认缓存目录下是否存在模型。
-
-    Args:
-        model_id: 模型 ID，如 "damo/speech_fsmn_vad_zh-cn-16k-common-onnx"
-        require_offline_mode: 是否要求离线模式才返回结果（默认 True 保持兼容）
-    """
-    if require_offline_mode and not OFFLINE_MODE:
-        return None
-
-    import os.path
-
-    # 获取所有可能的缓存目录
-    ms_cache = os.environ.get("MODELSCOPE_CACHE")
-    asr_cache = os.environ.get("ASR_CACHE_DIR")
-    home_cache = os.path.join(os.path.expanduser("~"), ".cache", "modelscope")
-
-    cache_bases = []
-    for c in [ms_cache, asr_cache, home_cache]:
-        if c:
-            cache_bases.append(c)
-            # 如果路径以 hub 结尾，也检查父目录
-            if os.path.basename(c).lower() == "hub":
-                cache_bases.append(os.path.dirname(c))
-
-    # 去重
-    cache_bases = list(dict.fromkeys(cache_bases))
-
-    for cache_dir in cache_bases:
-        if not cache_dir:
-            continue
-
-        # 多种可能的路径结构（按优先级排序）
-        candidates = [
-            # 标准 modelscope 结构
-            os.path.join(cache_dir, "hub", "models", model_id),
-            # 简化结构（下载脚本可能创建的）
-            os.path.join(cache_dir, model_id),
-            os.path.join(cache_dir, "models", model_id),
-            os.path.join(cache_dir, "hub", model_id),
-            # 嵌套的 modelscope 目录
-            os.path.join(cache_dir, "modelscope", "hub", "models", model_id),
-            os.path.join(cache_dir, "modelscope", "models", model_id),
-            os.path.join(cache_dir, "modelscope", model_id),
-        ]
-
-        for candidate in candidates:
-            if os.path.isdir(candidate):
-                # 检查是否有模型文件
-                try:
-                    files = os.listdir(candidate)
-                    if any(f.endswith(('.onnx', '.bin', '.json', '.yaml')) for f in files):
-                        sys.stderr.write(f"[FunASR Worker] Found local model: {candidate}\n")
-                        sys.stderr.flush()
-                        return candidate
-                except Exception:
-                    continue
-
-    return None
-
-
 def load_funasr_onnx_models(gpu_config: Optional[GPUConfig] = None):
     """
     加载 funasr_onnx 模型 (VAD + 流式ASR + 离线ASR + 标点)
@@ -456,7 +195,7 @@ def load_funasr_onnx_models(gpu_config: Optional[GPUConfig] = None):
     # 读取模型配置
     model_id = os.environ.get("ASR_MODEL", "funasr-paraformer")
 
-    device_info = detect_onnx_device()
+    device_info = detect_onnx_device(ASR_DEVICE, ASR_DEVICE_ID)
     if gpu_config is not None:
         # 兼容：允许外部显式传入 device_id（例如 test_funasr_gpu.py）
         try:
@@ -467,7 +206,7 @@ def load_funasr_onnx_models(gpu_config: Optional[GPUConfig] = None):
                 "providers": list(getattr(gpu_config, "providers", []) or []),
             }
         except Exception:
-            device_info = detect_onnx_device()
+            device_info = detect_onnx_device(ASR_DEVICE, ASR_DEVICE_ID)
     
     # 注意: ModelScope 上的 FunASR ONNX 模型仓库 (如 damo/speech_fsmn_vad_zh-cn-16k-common-onnx)
     # 只提供了量化版 model_quant.onnx，不提供非量化版 model.onnx。
@@ -564,132 +303,12 @@ def load_funasr_onnx_models(gpu_config: Optional[GPUConfig] = None):
         # 无法识别时原样返回（让后续报错更明确）
         return value
 
+    # 兼容旧名称，直接映射到公共模块函数
     def _ensure_vad_compatibility(model_dir: str):
-        """
-        修复 funasr_onnx VAD 模型的兼容性问题。
-        funasr_onnx 的 VAD 类硬编码了文件名 "vad.yaml" 和 "vad.onnx" (或 vad.mvn)，
-        但 ModelScope 下载的模型文件通常是 "config.yaml" 和 "model_quant.onnx"。
-
-        此函数检查并自动创建缺失文件的副本（使用复制而非软链，以兼容 Windows）。
-        同时修复配置文件中缺少 vad_post_conf 的问题。
-        """
-        if not model_dir or not os.path.exists(model_dir):
-            return
-
-        import shutil
-
-        # 1. 处理 config 文件: config.yaml -> vad.yaml
-        vad_yaml = os.path.join(model_dir, "vad.yaml")
-        config_yaml = os.path.join(model_dir, "config.yaml")
-
-        if not os.path.exists(vad_yaml) and os.path.exists(config_yaml):
-            try:
-                sys.stderr.write(f"[FunASR Worker] Compatibility fix: copying config.yaml to vad.yaml...\n")
-                shutil.copy2(config_yaml, vad_yaml)
-            except Exception as e:
-                sys.stderr.write(f"[FunASR Worker] Warning: failed to copy vad.yaml: {e}\n")
-
-        # 2. 处理 mvn 文件: am.mvn -> vad.mvn
-        vad_mvn = os.path.join(model_dir, "vad.mvn")
-        am_mvn = os.path.join(model_dir, "am.mvn")
-
-        if not os.path.exists(vad_mvn) and os.path.exists(am_mvn):
-            try:
-                sys.stderr.write(f"[FunASR Worker] Compatibility fix: copying am.mvn to vad.mvn...\n")
-                shutil.copy2(am_mvn, vad_mvn)
-            except Exception as e:
-                sys.stderr.write(f"[FunASR Worker] Warning: failed to copy vad.mvn: {e}\n")
-
-        # 3. 修复配置文件中缺少 vad_post_conf 的问题
-        # funasr_onnx 的 Fsmn_vad 类需要 config["vad_post_conf"]，
-        # 但 ModelScope 下载的模型使用的是 config["model_conf"]
-        if os.path.exists(config_yaml):
-            try:
-                import yaml
-                with open(config_yaml, "r", encoding="utf-8") as f:
-                    config = yaml.safe_load(f)
-
-                if config and "model_conf" in config and "vad_post_conf" not in config:
-                    config["vad_post_conf"] = config["model_conf"].copy()
-                    with open(config_yaml, "w", encoding="utf-8") as f:
-                        yaml.dump(config, f, default_flow_style=False, allow_unicode=True)
-                    sys.stderr.write(f"[FunASR Worker] Compatibility fix: added vad_post_conf to config.yaml\n")
-                    sys.stderr.flush()
-            except ImportError:
-                sys.stderr.write(f"[FunASR Worker] Warning: yaml library not available, cannot fix vad_post_conf\n")
-            except Exception as e:
-                sys.stderr.write(f"[FunASR Worker] Warning: failed to fix vad_post_conf: {e}\n")
-
-        # 4. 处理模型文件: model_quant.onnx -> vad.onnx
-        # 注意：funasr_onnx 内部逻辑：
-        # if quantize: load model_quant.onnx
-        # else: load model.onnx (若无则尝试导出)
-        #
-        # 但有些版本的 VAD 类可能硬编码 vad.onnx？
-        # 看了源码，VAD 类其实也是遵循 model.onnx / model_quant.onnx 的。
-        # 只有 config 和 mvn 是硬编码 vad.* 的。
-        #
-        # 为了保险起见，如果 vad.onnx 真的被引用了（某些旧版），我们也做个副本。
-        # 但根据刚读到的源码：model_file = os.path.join(model_dir, 'model.onnx')
-        # 所以只要有 model_quant.onnx 且启用了 quantize=True，应该就没问题。
-        #
-        # 这里暂时只处理 yaml 和 mvn。
+        return ensure_vad_compatibility(model_dir)
 
     def _ensure_asr_compatibility(model_dir: str):
-        """
-        修复 ASR/Punc 模型配置文件兼容性问题。
-        funasr_onnx 需要 config.yaml 中有 token_list 字段，
-        但 ModelScope 下载的模型使用独立的 tokens.json 文件。
-        对于标点模型，还需要把 model_conf.punc_list 复制到顶层。
-        """
-        if not model_dir or not os.path.exists(model_dir):
-            return
-
-        config_yaml = os.path.join(model_dir, "config.yaml")
-        tokens_json = os.path.join(model_dir, "tokens.json")
-
-        if not os.path.exists(config_yaml):
-            return
-
-        try:
-            import yaml
-            import json as json_module
-
-            with open(config_yaml, "r", encoding="utf-8") as f:
-                config = yaml.safe_load(f)
-
-            if not config:
-                return
-
-            modified = False
-
-            # 1. 添加 token_list（从 tokens.json 读取）
-            if "token_list" not in config and os.path.exists(tokens_json):
-                with open(tokens_json, "r", encoding="utf-8") as f:
-                    tokens = json_module.load(f)
-                if isinstance(tokens, list):
-                    config["token_list"] = tokens
-                    modified = True
-                    sys.stderr.write(f"[FunASR Worker] Compatibility fix: added token_list ({len(tokens)} tokens)\n")
-
-            # 2. 标点模型：复制 model_conf.punc_list 到顶层
-            if "punc_list" not in config and "model_conf" in config:
-                model_conf = config.get("model_conf", {})
-                if isinstance(model_conf, dict) and "punc_list" in model_conf:
-                    config["punc_list"] = model_conf["punc_list"].copy()
-                    modified = True
-                    sys.stderr.write(f"[FunASR Worker] Compatibility fix: added top-level punc_list\n")
-
-            if modified:
-                with open(config_yaml, "w", encoding="utf-8") as f:
-                    yaml.dump(config, f, default_flow_style=False, allow_unicode=True)
-                sys.stderr.write(f"[FunASR Worker] Config file updated: {config_yaml}\n")
-                sys.stderr.flush()
-
-        except ImportError:
-            sys.stderr.write(f"[FunASR Worker] Warning: yaml/json library not available for config fix\n")
-        except Exception as e:
-            sys.stderr.write(f"[FunASR Worker] Warning: failed to fix ASR config: {e}\n")
+        return ensure_asr_compatibility(model_dir)
 
     vad_model_id = _normalize_model_id(vad_model_id, "VAD")
     online_model_id = _normalize_model_id(online_model_id, "Streaming ASR (Pass 1)")
@@ -707,14 +326,17 @@ def load_funasr_onnx_models(gpu_config: Optional[GPUConfig] = None):
             model_type: 模型类型 - "vad", "asr", "punc"
         """
         # 总是尝试查找本地缓存（不再限制只在离线模式）
-        found = resolve_local_model_path(model_id, require_offline_mode=False)
+        found = resolve_local_model_path(model_id, require_offline_mode=False, offline_mode=OFFLINE_MODE)
 
         if found:
             # 根据模型类型应用不同的兼容性修复
             if model_type == "vad":
                 _ensure_vad_compatibility(found)
+            elif model_type == "punc":
+                _ensure_asr_compatibility(found)
+                ensure_punc_yaml(found)
             else:
-                # ASR 和 Punc 模型都需要 token_list 和可能的 punc_list
+                # ASR 流式/离线模型需要 token_list
                 _ensure_asr_compatibility(found)
 
         if OFFLINE_MODE and not found:
