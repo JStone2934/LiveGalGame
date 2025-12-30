@@ -1,12 +1,14 @@
 # Repository Guidelines
 For vibe-coding models
 ## Project Structure & Module Organization
-- `src/main.js` is the Electron main process entry; preload lives in `src/preload.js` and core modules in `src/core/`.
-- Renderer UI is React under `src/renderer/` (pages, components, styles).
-- ASR and audio tooling live in `src/asr/` and `src/native/` (native system audio capture).
-- Python-related assets and backends live in `python-env/`, `python-bootstrap/`, and `backend/`.
-- Build outputs go to `dist/` (renderer) and `release/` (packaged apps).
-- Helper scripts are in `scripts/` (dev, build, model download, test utilities).
+Electron 主进程：src/main.js 负责 .env 手动加载、文件日志、ASR 缓存/密钥注入、初始化窗口/IPC/快捷键/权限/ASR 预加载器，并在启动链路中逐步计时。
+Core 层：src/core/modules/ 下大量 IPC handler（配置、ASR 音频、LLM、媒体、memory、review、telemetry、window），加上 window-manager、shortcut-manager、permission-manager、review-service 等服务。
+ASR 前后端：
+JS 侧：src/asr/ 包含 model-manager.js（缓存/下载/探测）、asr-service.js（启动/管理后端子进程与健康检查）、model-cache.js、audio-utils.js 等。
+Python 侧：backend/main.py 提供 FastAPI + WebSocket bridge；backend/asr/asr_funasr_worker.py、asr_siliconflow_worker.py、asr_baidu_worker.py 分别处理不同引擎。
+辅助脚本：scripts/download_funasr_model.py 用于模型预下载。
+Renderer（React）：src/renderer/pages/ASRSettings.jsx 等页面承载大量状态与事件监听；components/Audio/*、hooks/useAudio*、HUD 相关组件在 renderer/ 内。
+其他：memory-service/ 是独立 FastAPI 微服务；db/ 提供 SQLite schema 与模块化 DAO。
 
 ## Build, Test, and Development Commands
 - `pnpm install` installs dependencies and runs `postinstall` (rebuilds `better-sqlite3`).

@@ -9,6 +9,9 @@ import {
   getSiliconflowApiKeySetting,
   setSiliconflowApiKeySetting,
   clearSiliconflowApiKeySetting,
+  getBaiduApiKeySetting,
+  setBaiduApiKeySetting,
+  clearBaiduApiKeySetting,
 } from '../../app-settings.js';
 import { applyAsrCacheEnv, computeAsrCachePaths } from '../../../asr/asr-cache-env.js';
 
@@ -134,6 +137,26 @@ export function registerAppConfigHandlers({ onAsrCacheChanged }) {
 
     setSiliconflowApiKeySetting(trimmed);
     process.env.SILICONFLOW_API_KEY = trimmed;
+    return { ok: true, cleared: false };
+  });
+
+  safeHandle('app-get-baidu-api-key', () => {
+    const persistedKey = getBaiduApiKeySetting();
+    const envKey = process.env.BAIDU_API_KEY || null;
+    const effectiveKey = envKey || persistedKey || '';
+    return { ok: true, apiKey: effectiveKey, hasKey: !!effectiveKey };
+  });
+
+  safeHandle('app-set-baidu-api-key', async (_event, apiKeyRaw) => {
+    const trimmed = apiKeyRaw === null || apiKeyRaw === undefined ? '' : String(apiKeyRaw).trim();
+    if (!trimmed) {
+      clearBaiduApiKeySetting();
+      delete process.env.BAIDU_API_KEY;
+      return { ok: true, cleared: true };
+    }
+
+    setBaiduApiKeySetting(trimmed);
+    process.env.BAIDU_API_KEY = trimmed;
     return { ok: true, cleared: false };
   });
 

@@ -28,7 +28,8 @@ function ASRSettings() {
   const [modelsError, setModelsError] = useState('');
   const [activeModelId, setActiveModelId] = useState(null);
   const [savingModelId, setSavingModelId] = useState(null);
-  const [downloadSource, setDownloadSource] = useState('huggingface');
+  // 固定使用 ModelScope 下载源（HuggingFace 上 FunASR 模型不完整）
+  const downloadSource = 'modelscope';
 
   // 模型缓存目录（HF / ModelScope）
   const [cacheInfo, setCacheInfo] = useState(null);
@@ -44,7 +45,14 @@ function ASRSettings() {
   const [siliconflowApiKeyError, setSiliconflowApiKeyError] = useState('');
   const [siliconflowApiKeyNotice, setSiliconflowApiKeyNotice] = useState('');
   const [siliconflowApiSupported, setSiliconflowApiSupported] = useState(true);
-  const [showSiliconflowApiKey, setShowSiliconflowApiKey] = useState(false);
+
+  // Baidu API Key（云端）
+  const [baiduApiKey, setBaiduApiKey] = useState('');
+  const [baiduApiKeyLoading, setBaiduApiKeyLoading] = useState(true);
+  const [baiduApiKeySaving, setBaiduApiKeySaving] = useState(false);
+  const [baiduApiKeyError, setBaiduApiKeyError] = useState('');
+  const [baiduApiKeyNotice, setBaiduApiKeyNotice] = useState('');
+  const [baiduApiSupported, setBaiduApiSupported] = useState(true);
 
   // 按引擎分组模型
   const modelsByEngine = modelPresets.reduce((acc, preset) => {
@@ -73,6 +81,7 @@ function ASRSettings() {
     loadModelData();
     loadCacheInfo();
     loadSiliconflowApiKey();
+    loadBaiduApiKey();
 
     const api = window.electronAPI;
     if (!api) {
@@ -346,6 +355,82 @@ function ASRSettings() {
     }
   };
 
+  const loadBaiduApiKey = async () => {
+    const api = window.electronAPI;
+    if (!api?.appGetBaiduApiKey) {
+      setBaiduApiSupported(false);
+      setBaiduApiKeyLoading(false);
+      return;
+    }
+    setBaiduApiSupported(true);
+    setBaiduApiKeyLoading(true);
+    setBaiduApiKeyError('');
+    try {
+      const res = await api.appGetBaiduApiKey();
+      if (!res?.ok) {
+        throw new Error(res?.message || '读取 API Key 失败');
+      }
+      setBaiduApiKey(res.apiKey || '');
+    } catch (error) {
+      setBaiduApiKeyError(error?.message || String(error));
+    } finally {
+      setBaiduApiKeyLoading(false);
+    }
+  };
+
+  const handleSaveBaiduApiKey = async () => {
+    const api = window.electronAPI;
+    if (!api?.appSetBaiduApiKey) {
+      setBaiduApiSupported(false);
+      setBaiduApiKeyError('当前版本不支持通过 GUI 配置 Baidu API Key');
+      return;
+    }
+    setBaiduApiKeySaving(true);
+    setBaiduApiKeyError('');
+    setBaiduApiKeyNotice('');
+    try {
+      const res = await api.appSetBaiduApiKey(baiduApiKey);
+      if (!res?.ok) {
+        throw new Error(res?.message || '保存 API Key 失败');
+      }
+      setBaiduApiKeyNotice(res?.cleared ? '已清除 API Key。' : '已保存 API Key。');
+      if (api.asrReloadModel) {
+        api.asrReloadModel().catch(() => {});
+      }
+    } catch (error) {
+      setBaiduApiKeyError(error?.message || String(error));
+    } finally {
+      setBaiduApiKeySaving(false);
+    }
+  };
+
+  const handleClearBaiduApiKey = async () => {
+    setBaiduApiKey('');
+    const api = window.electronAPI;
+    if (!api?.appSetBaiduApiKey) {
+      setBaiduApiSupported(false);
+      setBaiduApiKeyError('当前版本不支持通过 GUI 配置 Baidu API Key');
+      return;
+    }
+    setBaiduApiKeySaving(true);
+    setBaiduApiKeyError('');
+    setBaiduApiKeyNotice('');
+    try {
+      const res = await api.appSetBaiduApiKey('');
+      if (!res?.ok) {
+        throw new Error(res?.message || '清除 API Key 失败');
+      }
+      setBaiduApiKeyNotice('已清除 API Key。');
+      if (api.asrReloadModel) {
+        api.asrReloadModel().catch(() => {});
+      }
+    } catch (error) {
+      setBaiduApiKeyError(error?.message || String(error));
+    } finally {
+      setBaiduApiKeySaving(false);
+    }
+  };
+
   const loadModelData = async () => {
     try {
       setModelsError('');
@@ -548,14 +633,21 @@ function ASRSettings() {
 
     try {
       const api = window.electronAPI;
-      if (!api?.deleteLLMConfig) {
-        // TODO: 实现删除 ASR 配置的方法
-        alert('删除功能暂未实现');
+      if (!api?.asrDeleteConfig) {
+        throw new Error('ASR API 不可用');
+      }
+
+      const res = await api.asrDeleteConfig(configId);
+      if (res && res.ok === false) {
+        alert(res.message || '删除失败');
+        return;
+      }
+      if (res && res.deleted === false) {
+        alert(res.message || '删除失败');
         return;
       }
 
-      // await api.deleteASRConfig(configId);
-      alert('配置已删除（模拟）');
+      alert('配置已删除');
       await loadASRConfigs();
     } catch (err) {
       console.error('删除配置失败：', err);
@@ -709,7 +801,7 @@ function ASRSettings() {
             <div>
               <h2 className="text-xl font-semibold text-gray-900">模型缓存目录</h2>
               <p className="text-sm text-gray-600 mt-1">
-                管理 FunASR / HuggingFace / ModelScope 的模型下载位置，方便跨平台统一与迁移。
+                管理 FunASR / ModelScope 的模型下载位置，方便跨平台统一与迁移。
               </p>
             </div>
             <div className="flex items-center gap-2">
@@ -757,11 +849,6 @@ function ASRSettings() {
                 <div className="mt-1 break-all font-mono text-xs text-gray-800">{cacheInfo.computed.asrCacheBase}</div>
               </div>
               <div className="rounded-lg border border-gray-200 bg-gray-50 p-3">
-                <div className="text-xs font-semibold text-gray-700">HuggingFace 缓存（HF_HOME / hub）</div>
-                <div className="mt-1 break-all font-mono text-xs text-gray-800">{cacheInfo.computed.hfHome}</div>
-                <div className="mt-1 break-all font-mono text-xs text-gray-600">{cacheInfo.computed.asrCacheDir}</div>
-              </div>
-              <div className="rounded-lg border border-gray-200 bg-gray-50 p-3 md:col-span-2">
                 <div className="text-xs font-semibold text-gray-700">ModelScope 缓存（MODELSCOPE_CACHE / hub）</div>
                 <div className="mt-1 break-all font-mono text-xs text-gray-800">{cacheInfo.computed.modelscopeCacheBase}</div>
                 <div className="mt-1 break-all font-mono text-xs text-gray-600">{cacheInfo.computed.modelscopeCacheHub}</div>
@@ -791,26 +878,6 @@ function ASRSettings() {
             </p>
           </div>
           <div className="flex items-center gap-4">
-            <div className="flex items-center bg-gray-100 rounded-lg p-1">
-              <button
-                onClick={() => setDownloadSource('huggingface')}
-                className={`px-3 py-1.5 text-xs font-medium rounded-md transition-all ${downloadSource === 'huggingface'
-                    ? 'bg-white text-blue-600 shadow-sm'
-                    : 'text-gray-600 hover:text-gray-900'
-                  }`}
-              >
-                HuggingFace
-              </button>
-              <button
-                onClick={() => setDownloadSource('modelscope')}
-                className={`px-3 py-1.5 text-xs font-medium rounded-md transition-all ${downloadSource === 'modelscope'
-                    ? 'bg-white text-blue-600 shadow-sm'
-                    : 'text-gray-600 hover:text-gray-900'
-                  }`}
-              >
-                ModelScope (国内推荐)
-              </button>
-            </div>
             <button
               onClick={loadModelData}
               className="rounded-lg border border-gray-300 px-3 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50 flex items-center gap-2"
@@ -818,86 +885,6 @@ function ASRSettings() {
               <span className="material-symbols-outlined text-sm">refresh</span>
               刷新状态
             </button>
-          </div>
-        </div>
-
-        <div className="mt-4">
-          <div className="rounded-2xl border border-gray-200 bg-white p-5">
-            <div className="flex flex-wrap items-start justify-between gap-3">
-              <div>
-                <h3 className="text-lg font-semibold text-gray-900">SiliconFlow API Key</h3>
-                <p className="text-sm text-gray-600 mt-1">
-                  用于 TeleAI/TeleSpeechASR 云端识别；保存后会自动重载 ASR。
-                </p>
-              </div>
-              <button
-                onClick={loadSiliconflowApiKey}
-                disabled={siliconflowApiKeySaving}
-                className="rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50 disabled:cursor-not-allowed disabled:text-gray-400"
-              >
-                刷新
-              </button>
-            </div>
-
-            {!siliconflowApiSupported ? (
-              <div className="mt-4 rounded-lg border border-amber-200 bg-amber-50 p-3 text-sm text-amber-800">
-                当前版本不支持通过 GUI 配置 SiliconFlow API Key。
-              </div>
-            ) : (
-              <>
-                {siliconflowApiKeyNotice && (
-                  <div className="mt-4 rounded-lg border border-blue-200 bg-blue-50 p-3 text-sm text-blue-800">
-                    {siliconflowApiKeyNotice}
-                  </div>
-                )}
-                {siliconflowApiKeyError && (
-                  <div className="mt-4 rounded-lg border border-red-200 bg-red-50 p-3 text-sm text-red-700">
-                    {siliconflowApiKeyError}
-                  </div>
-                )}
-                {siliconflowApiKeyLoading ? (
-                  <div className="mt-4 text-sm text-gray-600">正在读取 API Key…</div>
-                ) : (
-                  <div className="mt-3 grid gap-3 md:grid-cols-[1fr_auto]">
-                    <div className="relative">
-                      <input
-                        type={showSiliconflowApiKey ? 'text' : 'password'}
-                        placeholder="请输入 SiliconFlow API Key"
-                        value={siliconflowApiKey}
-                        onChange={(e) => setSiliconflowApiKey(e.target.value)}
-                        className="w-full rounded-lg border border-gray-300 px-3 py-2 pr-16 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
-                      />
-                      <button
-                        type="button"
-                        onClick={() => setShowSiliconflowApiKey((prev) => !prev)}
-                        className="absolute right-2 top-1/2 -translate-y-1/2 rounded-md px-2 py-1 text-xs text-gray-600 hover:bg-gray-100"
-                      >
-                        {showSiliconflowApiKey ? '隐藏' : '显示'}
-                      </button>
-                    </div>
-                    <div className="flex items-center gap-2">
-                      <button
-                        onClick={handleSaveSiliconflowApiKey}
-                        disabled={siliconflowApiKeySaving}
-                        className="rounded-lg bg-blue-600 px-4 py-2 text-sm font-medium text-white hover:bg-blue-700 disabled:cursor-not-allowed disabled:bg-blue-300"
-                      >
-                        {siliconflowApiKeySaving ? '保存中…' : '保存'}
-                      </button>
-                      <button
-                        onClick={handleClearSiliconflowApiKey}
-                        disabled={siliconflowApiKeySaving}
-                        className="rounded-lg border border-gray-300 px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50 disabled:cursor-not-allowed disabled:text-gray-400"
-                      >
-                        清除
-                      </button>
-                    </div>
-                  </div>
-                )}
-                <div className="mt-2 text-xs text-gray-500">
-                  API Key 会保存在本地设置中，仅用于本机调用云端 ASR。
-                </div>
-              </>
-            )}
           </div>
         </div>
 
@@ -929,20 +916,49 @@ function ASRSettings() {
                     {engineNames[engine] || engine}
                   </h3>
                 </div>
-                <div className="grid gap-5 md:grid-cols-2 xl:grid-cols-3">
-                  {presets.map((preset) => (
-                    <ASRModelCard
-                      key={preset.id}
-                      preset={preset}
-                      status={modelStatuses[preset.id] || {}}
-                      activeModelId={activeModelId}
-                      savingModelId={savingModelId}
-                      modelsLoading={modelsLoading}
-                      onSetActive={handleSetActiveModel}
-                      onDownload={handleDownloadModel}
-                      onCancelDownload={handleCancelDownload}
-                    />
-                  ))}
+                <div className="grid gap-5 md:grid-cols-2">
+                  {presets.map((preset) => {
+                    // 根据 preset.id 选择对应的 API Key props
+                    const isBaidu = preset.id === 'baidu-cloud';
+                    const apiKeyProps = isBaidu ? {
+                      apiKey: baiduApiKey,
+                      apiKeyLoading: baiduApiKeyLoading,
+                      apiKeySaving: baiduApiKeySaving,
+                      apiKeyError: baiduApiKeyError,
+                      apiKeyNotice: baiduApiKeyNotice,
+                      apiKeySupported: baiduApiSupported,
+                      onApiKeyChange: setBaiduApiKey,
+                      onApiKeySave: handleSaveBaiduApiKey,
+                      onApiKeyClear: handleClearBaiduApiKey,
+                      onApiKeyRefresh: loadBaiduApiKey,
+                    } : {
+                      apiKey: siliconflowApiKey,
+                      apiKeyLoading: siliconflowApiKeyLoading,
+                      apiKeySaving: siliconflowApiKeySaving,
+                      apiKeyError: siliconflowApiKeyError,
+                      apiKeyNotice: siliconflowApiKeyNotice,
+                      apiKeySupported: siliconflowApiSupported,
+                      onApiKeyChange: setSiliconflowApiKey,
+                      onApiKeySave: handleSaveSiliconflowApiKey,
+                      onApiKeyClear: handleClearSiliconflowApiKey,
+                      onApiKeyRefresh: loadSiliconflowApiKey,
+                    };
+
+                    return (
+                      <ASRModelCard
+                        key={preset.id}
+                        preset={preset}
+                        status={modelStatuses[preset.id] || {}}
+                        activeModelId={activeModelId}
+                        savingModelId={savingModelId}
+                        modelsLoading={modelsLoading}
+                        onSetActive={handleSetActiveModel}
+                        onDownload={handleDownloadModel}
+                        onCancelDownload={handleCancelDownload}
+                        {...apiKeyProps}
+                      />
+                    );
+                  })}
                 </div>
               </div>
             ))}

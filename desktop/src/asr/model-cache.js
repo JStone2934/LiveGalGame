@@ -137,29 +137,55 @@ export function resolveModelCache(modelName) {
   return { cacheDir: candidates[0] || path.join(app.getPath('userData'), 'hf-home', 'hub'), found: false };
 }
 
+/**
+ * 在给定的 cacheDir 下查找 modelscope 模型目录
+ * modelscope 库的缓存结构是: MODELSCOPE_CACHE/hub/models/<org>/<model>
+ * 但历史上也可能存在其他变体，所以我们检查多个可能的路径
+ */
+function findModelInCache(cacheDir, modelDir) {
+  if (!cacheDir || !modelDir) return null;
+
+  // 可能的路径变体（按优先级排序）
+  const candidates = [
+    path.join(cacheDir, 'hub', 'models', modelDir),  // 标准 modelscope 路径
+    path.join(cacheDir, 'models', modelDir),          // 简化路径
+    path.join(cacheDir, 'hub', modelDir),             // hub 下直接放
+    path.join(cacheDir, modelDir),                    // 根目录下
+  ];
+
+  for (const p of candidates) {
+    if (fs.existsSync(p)) {
+      return p;
+    }
+  }
+  return null;
+}
+
 export function resolveFunasrModelScopeCache(preset) {
   if (!preset?.onnxModels) {
     return null;
   }
   const modelDirs = Array.from(new Set(Object.values(preset.onnxModels).filter(Boolean)));
 
-  const systemMsCache = path.join(os.homedir(), '.cache', 'modelscope', 'hub');
+  // 系统默认 modelscope 缓存目录（注意：这里是 base，不是 hub）
+  const systemMsCacheBase = path.join(os.homedir(), '.cache', 'modelscope');
+
+  // 检查系统缓存
   try {
     let systemHit = false;
     let systemBytes = 0;
+    let foundPath = null;
     for (const dir of modelDirs) {
-      const p1 = path.join(systemMsCache, dir);
-      const p2 = path.join(systemMsCache, 'models', dir);
-      if (fs.existsSync(p1)) {
+      const found = findModelInCache(systemMsCacheBase, dir);
+      if (found) {
         systemHit = true;
-        systemBytes += safeDirSize(p1);
-      } else if (fs.existsSync(p2)) {
-        systemHit = true;
-        systemBytes += safeDirSize(p2);
+        systemBytes += safeDirSize(found);
+        if (!foundPath) foundPath = found;
       }
     }
     if (systemHit && systemBytes > 0) {
-      return { cacheDir: systemMsCache, found: true };
+      logger.log(`[ASR] Found models in system cache: ${foundPath}`);
+      return { cacheDir: systemMsCacheBase, found: true, foundPath };
     }
   } catch {
     // ignore and continue
@@ -168,32 +194,39 @@ export function resolveFunasrModelScopeCache(preset) {
   const candidates = getModelCacheCandidates();
   let best = null;
   let bestBytes = -1;
+  let bestFoundPath = null;
+
   for (const candidate of candidates) {
-    if (candidate === systemMsCache) continue;
+    if (candidate === systemMsCacheBase) continue;
 
     try {
       let hit = false;
       let bytes = 0;
+      let firstFoundPath = null;
+
       for (const dir of modelDirs) {
-        const p1 = path.join(candidate, dir);
-        const p2 = path.join(candidate, 'models', dir);
-        if (fs.existsSync(p1)) {
+        const found = findModelInCache(candidate, dir);
+        if (found) {
           hit = true;
-          bytes += safeDirSize(p1);
-        } else if (fs.existsSync(p2)) {
-          hit = true;
-          bytes += safeDirSize(p2);
+          bytes += safeDirSize(found);
+          if (!firstFoundPath) firstFoundPath = found;
         }
       }
+
       if (hit && bytes > bestBytes) {
         best = { cacheDir: candidate, found: true };
         bestBytes = bytes;
+        bestFoundPath = firstFoundPath;
       }
     } catch {
       // ignore and continue
     }
   }
-  if (best) return best;
 
-  return { cacheDir: systemMsCache, found: false };
+  if (best) {
+    logger.log(`[ASR] Found models in app cache: ${bestFoundPath}`);
+    return { ...best, foundPath: bestFoundPath };
+  }
+
+  return { cacheDir: systemMsCacheBase, found: false };
 }

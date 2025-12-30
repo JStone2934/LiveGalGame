@@ -166,6 +166,15 @@ export function registerASRAudioHandlers({
     }
   });
 
+  ipcMain.handle('asr-delete-config', (event, id) => {
+    try {
+      return db.deleteASRConfig(id);
+    } catch (error) {
+      console.error('Error deleting ASR config:', error);
+      throw error;
+    }
+  });
+
   ipcMain.handle('asr-reload-model', async () => {
     try {
       await reloadASRModel();

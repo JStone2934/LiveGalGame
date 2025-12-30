@@ -265,46 +265,200 @@ export default class ASRModelManager extends EventEmitter {
   }
 
   /**
+   * 在给定的 cacheDir 下查找 modelscope 模型目录
+   * modelscope 库的缓存结构是: MODELSCOPE_CACHE/hub/models/<org>/<model>
+   * 但历史上也可能存在其他变体
+   */
+  findModelInCache(cacheDir, modelDir) {
+    if (!cacheDir || !modelDir) return null;
+
+    // 可能的路径变体（按优先级排序）
+    const candidates = [
+      path.join(cacheDir, 'hub', 'models', modelDir),  // 标准 modelscope 路径
+      path.join(cacheDir, 'models', modelDir),          // 简化路径
+      path.join(cacheDir, 'hub', modelDir),             // hub 下直接放
+      path.join(cacheDir, modelDir),                    // 根目录下
+    ];
+
+    for (const p of candidates) {
+      try {
+        if (fs.existsSync(p)) {
+          return p;
+        }
+      } catch {
+        // ignore
+      }
+    }
+    return null;
+  }
+
+  /**
+   * FunASR ONNX 各模型的关键文件列表
+   * 使用数组表示"或"关系：只要任一文件存在即可
+   * 只有所有必需文件组都满足，模型才算下载完整
+   */
+  static FUNASR_CRITICAL_FILES = {
+    // VAD 模型：需要配置文件 + 模型文件
+    vad: [
+      ['vad.yaml', 'config.yaml'],           // 配置文件（任一存在）
+      ['vad.onnx', 'model_quant.onnx'],      // 模型文件（任一存在）
+    ],
+    // Online ASR 模型
+    online: [
+      ['config.yaml'],
+      ['model.onnx', 'model_quant.onnx', 'decoder_quant.onnx'],
+      ['am.mvn'],
+    ],
+    // Offline ASR 模型
+    offline: [
+      ['config.yaml'],
+      ['model.onnx', 'model_quant.onnx'],
+      ['am.mvn'],
+    ],
+    // 标点模型
+    punc: [
+      ['config.yaml'],
+      ['punc.onnx', 'model_quant.onnx'],
+    ],
+  };
+
+  /**
+   * 判断文件是否存在且非空
+   */
+  fileExistsNonEmpty(filePath) {
+    try {
+      const stat = fs.statSync(filePath);
+      return stat.isFile() && stat.size > 0;
+    } catch {
+      return false;
+    }
+  }
+
+  /**
+   * 检查 FunASR 模型目录中的关键文件是否存在
+   * @param {string} modelPath - 模型目录路径
+   * @param {string} modelType - 模型类型 (vad, online, offline, punc)
+   * @returns {{ isComplete: boolean, missingFiles: string[] }}
+   */
+  checkFunASRCriticalFiles(modelPath, modelType) {
+    const fileGroups = ASRModelManager.FUNASR_CRITICAL_FILES[modelType] || [];
+    const missingGroups = [];
+
+    for (const fileGroup of fileGroups) {
+      // 检查文件组中是否至少有一个文件存在
+      const hasAny = fileGroup.some((fileName) => {
+        const filePath = path.join(modelPath, fileName);
+        return this.fileExistsNonEmpty(filePath);
+      });
+
+      if (!hasAny) {
+        // 记录缺失的文件组（取第一个作为代表）
+        missingGroups.push(fileGroup[0]);
+      }
+    }
+
+    // 额外的配置完整性检查（防止字段缺失导致加载时报错）
+    const configPath = path.join(modelPath, 'config.yaml');
+    let configContent = '';
+    if (this.fileExistsNonEmpty(configPath)) {
+      try {
+        configContent = fs.readFileSync(configPath, 'utf-8');
+      } catch {
+        configContent = '';
+      }
+    }
+
+    if (modelType === 'vad') {
+      // funasr_onnx 需要 vad_post_conf，且会优先读取 vad.yaml
+      const vadYamlPath = path.join(modelPath, 'vad.yaml');
+      const vadYamlContent = this.fileExistsNonEmpty(vadYamlPath)
+        ? (() => {
+            try {
+              return fs.readFileSync(vadYamlPath, 'utf-8');
+            } catch {
+              return '';
+            }
+          })()
+        : '';
+
+      // 若 config.yaml 或 vad.yaml 任一缺少 vad_post_conf，都标记缺失
+      const hasVadPostConfInConfig = configContent && configContent.includes('vad_post_conf');
+      const hasVadPostConfInVadYaml = vadYamlContent && vadYamlContent.includes('vad_post_conf');
+      if (!hasVadPostConfInConfig || !hasVadPostConfInVadYaml) {
+        missingGroups.push('vad_post_conf');
+      }
+    }
+
+    if (['online', 'offline', 'punc'].includes(modelType)) {
+      const tokensPath = path.join(modelPath, 'tokens.json');
+      const hasTokensFile = this.fileExistsNonEmpty(tokensPath);
+      const hasTokenListInConfig = configContent && configContent.includes('token_list');
+      if (!hasTokensFile && !hasTokenListInConfig) {
+        missingGroups.push('token_list');
+      }
+    }
+
+    return {
+      isComplete: missingGroups.length === 0,
+      missingFiles: missingGroups,
+    };
+  }
+
+  /**
    * 获取 FunASR ONNX 模型的状态
-   * 这些模型由 funasr_onnx 库自己管理下载，缓存在 ~/.cache/modelscope/hub/ 目录
+   * 这些模型由 funasr_onnx 库自己管理下载，缓存在 MODELSCOPE_CACHE/hub/models/ 目录
    */
   getFunASROnnxModelStatus(modelId, preset) {
     const onnxModels = preset.onnxModels || {};
-    const modelDirs = Object.values(onnxModels);
+    const modelEntries = Object.entries(onnxModels); // [[modelType, modelDir], ...]
 
-    // funasr_onnx 使用的缓存目录
-    // 注意：ModelScope 有时会将模型放在 hub/ 下，有时放在与 hub 同级的 models/ 下
-    // funasr_onnx 实际下载位置是 ~/.cache/modelscope/models/damo/...
-    const funasrCacheDirs = [
-      // 优先检查 models 目录（funasr_onnx 实际下载位置）
-      path.join(os.homedir(), '.cache', 'modelscope', 'models'),
-      // 兼容其他可能的目录结构
-      path.join(os.homedir(), '.cache', 'modelscope', 'hub'),
-      path.join(os.homedir(), '.cache', 'modelscope', 'hub', 'models'),
-      this.msCacheHub,
-      this.msCacheHub ? path.join(this.msCacheHub, 'models') : null,
-      this.msCacheBase ? path.join(this.msCacheBase, 'models') : null,
-      this.systemMsCache,
-      path.join(this.systemMsCache, 'models'),
+    // funasr_onnx 使用的缓存目录（base 目录，不是 hub）
+    // modelscope 实际下载位置是 MODELSCOPE_CACHE/hub/models/iic/...
+    const funasrCacheBases = [
+      // 系统默认
+      path.join(os.homedir(), '.cache', 'modelscope'),
+      // 应用配置的缓存目录
+      this.msCacheBase,
+      this.msCacheHub ? path.dirname(this.msCacheHub) : null,
+      // 兼容旧版本
+      this.systemMsCache ? path.dirname(this.systemMsCache) : null,
     ].filter(Boolean);
+
+    // 去重
+    const uniqueBases = [...new Set(funasrCacheBases)];
 
     let totalDownloadedBytes = 0;
     let modelsFound = 0;
+    let modelsComplete = 0;
     let latestUpdatedAt = null;
     let foundPaths = [];
+    let incompleteModels = []; // 记录不完整的模型信息
 
-    for (const modelDir of modelDirs) {
+    for (const [modelType, modelDir] of modelEntries) {
       if (!modelDir) continue;
 
-      // modelDir 格式: "damo/speech_fsmn_vad_zh-cn-16k-common-onnx"
-      for (const cacheDir of funasrCacheDirs) {
-        const modelPath = path.join(cacheDir, modelDir);
-        try {
-          if (fs.existsSync(modelPath)) {
+      // modelDir 格式: "iic/speech_fsmn_vad_zh-cn-16k-common-onnx"
+      for (const cacheBase of uniqueBases) {
+        const modelPath = this.findModelInCache(cacheBase, modelDir);
+        if (modelPath) {
+          try {
             const size = directorySize(modelPath);
             totalDownloadedBytes += size;
             modelsFound++;
             foundPaths.push(modelPath);
+
+            // 检查关键文件是否完整
+            const { isComplete, missingFiles } = this.checkFunASRCriticalFiles(modelPath, modelType);
+            if (isComplete) {
+              modelsComplete++;
+            } else {
+              incompleteModels.push({
+                type: modelType,
+                path: modelPath,
+                missingFiles,
+              });
+              console.warn(`[ASR ModelManager] Model ${modelType} at ${modelPath} is incomplete, missing: ${missingFiles.join(', ')}`);
+            }
 
             try {
               const stat = fs.statSync(modelPath);
@@ -315,25 +469,29 @@ export default class ASRModelManager extends EventEmitter {
               // ignore
             }
             break; // Found this model, move to next
+          } catch {
+            // ignore
           }
-        } catch {
-          // ignore
         }
       }
     }
 
-    const totalModels = modelDirs.length;
-    const isDownloaded = modelsFound >= totalModels;
+    const totalModels = modelEntries.length;
+    // 只有所有模型都找到且关键文件完整，才算真正下载完成
+    const isDownloaded = modelsFound >= totalModels && modelsComplete >= totalModels;
 
     // 如果所有模型都找到了，使用第一个找到的路径作为快照路径
     const snapshotPath = foundPaths.length > 0 ? path.dirname(foundPaths[0]) : null;
 
     console.log(`[ASR ModelManager] FunASR ONNX Status for ${modelId}:`, {
       modelsFound,
+      modelsComplete,
       totalModels,
       isDownloaded,
       totalDownloadedBytes,
-      foundPaths: foundPaths.slice(0, 2), // 只打印前两个
+      foundPaths: foundPaths.slice(0, 2), // 只打印前两个以便调试
+      searchedBases: uniqueBases.slice(0, 3),
+      incompleteModels: incompleteModels.length > 0 ? incompleteModels : undefined,
     });
 
     return {
@@ -349,7 +507,11 @@ export default class ASRModelManager extends EventEmitter {
       source: 'funasr_onnx',
       // FunASR 特有信息
       onnxModelsFound: modelsFound,
+      onnxModelsComplete: modelsComplete,
       onnxModelsTotal: totalModels,
+      // 添加更多调试信息，方便用户查看
+      foundPaths,
+      incompleteModels: incompleteModels.length > 0 ? incompleteModels : undefined,
     };
   }
 
@@ -376,7 +538,7 @@ export default class ASRModelManager extends EventEmitter {
     }
 
     // FunASR ONNX 模型特殊处理
-    // 这些模型由 funasr_onnx 库自己管理下载，缓存在 ~/.cache/modelscope/hub/damo/ 目录
+    // 这些模型由 funasr_onnx 库自己管理下载，缓存在 ~/.cache/modelscope/hub/iic/ 目录
     if (preset.engine === 'funasr' && preset.onnxModels) {
       return this.getFunASROnnxModelStatus(modelId, preset);
     }
@@ -396,7 +558,7 @@ export default class ASRModelManager extends EventEmitter {
     }
 
     // Check ModelScope cache
-    // ModelScope structure: cacheDir / repoId (e.g. damo/speech_paraformer-large_asr_nat-zh-cn-16k-common-vocab8404-onnx)
+    // ModelScope structure: cacheDir / repoId (e.g. iic/speech_paraformer-large_asr_nat-zh-cn-16k-common-vocab8404-onnx)
     // or sometimes cacheDir / repoId / .mv / ...
     // Simple check: cacheDir / repoId
     let msSnapshotPath = null;
@@ -536,7 +698,9 @@ export default class ASRModelManager extends EventEmitter {
       '--model-id',
       preset.id,
       '--cache-dir',
-      this.msCacheBase || this.msCacheHub // FunASR 默认用 ModelScope 缓存
+      this.msCacheBase || this.msCacheHub, // FunASR 默认用 ModelScope 缓存
+      '--source',
+      source // 传递用户选择的下载源 (huggingface / modelscope)
     ];
 
     console.log(`[ASR ModelManager] Starting download: modelId=${modelId}, source=${source}, repoId=${repoId}`);

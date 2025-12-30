@@ -369,38 +369,66 @@ class SessionState:
         self.start_time = 0.0
 
 
-def resolve_local_model_path(model_id: str) -> Optional[str]:
+def resolve_local_model_path(model_id: str, require_offline_mode: bool = True) -> Optional[str]:
     """
-    在离线模式下，解析本地模型路径。
+    解析本地模型路径。
     检查 MODELSCOPE_CACHE 和默认缓存目录下是否存在模型。
+
+    Args:
+        model_id: 模型 ID，如 "damo/speech_fsmn_vad_zh-cn-16k-common-onnx"
+        require_offline_mode: 是否要求离线模式才返回结果（默认 True 保持兼容）
     """
-    if not OFFLINE_MODE:
+    if require_offline_mode and not OFFLINE_MODE:
         return None
-    
+
     import os.path
-    cache_dirs = [
-        os.environ.get("MODELSCOPE_CACHE"),
-        os.environ.get("ASR_CACHE_DIR"),
-        os.path.join(os.path.expanduser("~"), ".cache", "modelscope", "hub"),
-    ]
-    
-    for cache_dir in cache_dirs:
+
+    # 获取所有可能的缓存目录
+    ms_cache = os.environ.get("MODELSCOPE_CACHE")
+    asr_cache = os.environ.get("ASR_CACHE_DIR")
+    home_cache = os.path.join(os.path.expanduser("~"), ".cache", "modelscope")
+
+    cache_bases = []
+    for c in [ms_cache, asr_cache, home_cache]:
+        if c:
+            cache_bases.append(c)
+            # 如果路径以 hub 结尾，也检查父目录
+            if os.path.basename(c).lower() == "hub":
+                cache_bases.append(os.path.dirname(c))
+
+    # 去重
+    cache_bases = list(dict.fromkeys(cache_bases))
+
+    for cache_dir in cache_bases:
         if not cache_dir:
             continue
-        # ModelScope 缓存结构: hub/models/<model_id>/
+
+        # 多种可能的路径结构（按优先级排序）
         candidates = [
+            # 标准 modelscope 结构
+            os.path.join(cache_dir, "hub", "models", model_id),
+            # 简化结构（下载脚本可能创建的）
             os.path.join(cache_dir, model_id),
             os.path.join(cache_dir, "models", model_id),
+            os.path.join(cache_dir, "hub", model_id),
+            # 嵌套的 modelscope 目录
+            os.path.join(cache_dir, "modelscope", "hub", "models", model_id),
+            os.path.join(cache_dir, "modelscope", "models", model_id),
+            os.path.join(cache_dir, "modelscope", model_id),
         ]
+
         for candidate in candidates:
             if os.path.isdir(candidate):
                 # 检查是否有模型文件
-                files = os.listdir(candidate)
-                if any(f.endswith(('.onnx', '.bin', '.json')) for f in files):
-                    sys.stderr.write(f"[FunASR Worker] Found local model: {candidate}\n")
-                    sys.stderr.flush()
-                    return candidate
-    
+                try:
+                    files = os.listdir(candidate)
+                    if any(f.endswith(('.onnx', '.bin', '.json', '.yaml')) for f in files):
+                        sys.stderr.write(f"[FunASR Worker] Found local model: {candidate}\n")
+                        sys.stderr.flush()
+                        return candidate
+                except Exception:
+                    continue
+
     return None
 
 
@@ -536,57 +564,198 @@ def load_funasr_onnx_models(gpu_config: Optional[GPUConfig] = None):
         # 无法识别时原样返回（让后续报错更明确）
         return value
 
+    def _ensure_vad_compatibility(model_dir: str):
+        """
+        修复 funasr_onnx VAD 模型的兼容性问题。
+        funasr_onnx 的 VAD 类硬编码了文件名 "vad.yaml" 和 "vad.onnx" (或 vad.mvn)，
+        但 ModelScope 下载的模型文件通常是 "config.yaml" 和 "model_quant.onnx"。
+
+        此函数检查并自动创建缺失文件的副本（使用复制而非软链，以兼容 Windows）。
+        同时修复配置文件中缺少 vad_post_conf 的问题。
+        """
+        if not model_dir or not os.path.exists(model_dir):
+            return
+
+        import shutil
+
+        # 1. 处理 config 文件: config.yaml -> vad.yaml
+        vad_yaml = os.path.join(model_dir, "vad.yaml")
+        config_yaml = os.path.join(model_dir, "config.yaml")
+
+        if not os.path.exists(vad_yaml) and os.path.exists(config_yaml):
+            try:
+                sys.stderr.write(f"[FunASR Worker] Compatibility fix: copying config.yaml to vad.yaml...\n")
+                shutil.copy2(config_yaml, vad_yaml)
+            except Exception as e:
+                sys.stderr.write(f"[FunASR Worker] Warning: failed to copy vad.yaml: {e}\n")
+
+        # 2. 处理 mvn 文件: am.mvn -> vad.mvn
+        vad_mvn = os.path.join(model_dir, "vad.mvn")
+        am_mvn = os.path.join(model_dir, "am.mvn")
+
+        if not os.path.exists(vad_mvn) and os.path.exists(am_mvn):
+            try:
+                sys.stderr.write(f"[FunASR Worker] Compatibility fix: copying am.mvn to vad.mvn...\n")
+                shutil.copy2(am_mvn, vad_mvn)
+            except Exception as e:
+                sys.stderr.write(f"[FunASR Worker] Warning: failed to copy vad.mvn: {e}\n")
+
+        # 3. 修复配置文件中缺少 vad_post_conf 的问题
+        # funasr_onnx 的 Fsmn_vad 类需要 config["vad_post_conf"]，
+        # 但 ModelScope 下载的模型使用的是 config["model_conf"]
+        if os.path.exists(config_yaml):
+            try:
+                import yaml
+                with open(config_yaml, "r", encoding="utf-8") as f:
+                    config = yaml.safe_load(f)
+
+                if config and "model_conf" in config and "vad_post_conf" not in config:
+                    config["vad_post_conf"] = config["model_conf"].copy()
+                    with open(config_yaml, "w", encoding="utf-8") as f:
+                        yaml.dump(config, f, default_flow_style=False, allow_unicode=True)
+                    sys.stderr.write(f"[FunASR Worker] Compatibility fix: added vad_post_conf to config.yaml\n")
+                    sys.stderr.flush()
+            except ImportError:
+                sys.stderr.write(f"[FunASR Worker] Warning: yaml library not available, cannot fix vad_post_conf\n")
+            except Exception as e:
+                sys.stderr.write(f"[FunASR Worker] Warning: failed to fix vad_post_conf: {e}\n")
+
+        # 4. 处理模型文件: model_quant.onnx -> vad.onnx
+        # 注意：funasr_onnx 内部逻辑：
+        # if quantize: load model_quant.onnx
+        # else: load model.onnx (若无则尝试导出)
+        #
+        # 但有些版本的 VAD 类可能硬编码 vad.onnx？
+        # 看了源码，VAD 类其实也是遵循 model.onnx / model_quant.onnx 的。
+        # 只有 config 和 mvn 是硬编码 vad.* 的。
+        #
+        # 为了保险起见，如果 vad.onnx 真的被引用了（某些旧版），我们也做个副本。
+        # 但根据刚读到的源码：model_file = os.path.join(model_dir, 'model.onnx')
+        # 所以只要有 model_quant.onnx 且启用了 quantize=True，应该就没问题。
+        #
+        # 这里暂时只处理 yaml 和 mvn。
+
+    def _ensure_asr_compatibility(model_dir: str):
+        """
+        修复 ASR/Punc 模型配置文件兼容性问题。
+        funasr_onnx 需要 config.yaml 中有 token_list 字段，
+        但 ModelScope 下载的模型使用独立的 tokens.json 文件。
+        对于标点模型，还需要把 model_conf.punc_list 复制到顶层。
+        """
+        if not model_dir or not os.path.exists(model_dir):
+            return
+
+        config_yaml = os.path.join(model_dir, "config.yaml")
+        tokens_json = os.path.join(model_dir, "tokens.json")
+
+        if not os.path.exists(config_yaml):
+            return
+
+        try:
+            import yaml
+            import json as json_module
+
+            with open(config_yaml, "r", encoding="utf-8") as f:
+                config = yaml.safe_load(f)
+
+            if not config:
+                return
+
+            modified = False
+
+            # 1. 添加 token_list（从 tokens.json 读取）
+            if "token_list" not in config and os.path.exists(tokens_json):
+                with open(tokens_json, "r", encoding="utf-8") as f:
+                    tokens = json_module.load(f)
+                if isinstance(tokens, list):
+                    config["token_list"] = tokens
+                    modified = True
+                    sys.stderr.write(f"[FunASR Worker] Compatibility fix: added token_list ({len(tokens)} tokens)\n")
+
+            # 2. 标点模型：复制 model_conf.punc_list 到顶层
+            if "punc_list" not in config and "model_conf" in config:
+                model_conf = config.get("model_conf", {})
+                if isinstance(model_conf, dict) and "punc_list" in model_conf:
+                    config["punc_list"] = model_conf["punc_list"].copy()
+                    modified = True
+                    sys.stderr.write(f"[FunASR Worker] Compatibility fix: added top-level punc_list\n")
+
+            if modified:
+                with open(config_yaml, "w", encoding="utf-8") as f:
+                    yaml.dump(config, f, default_flow_style=False, allow_unicode=True)
+                sys.stderr.write(f"[FunASR Worker] Config file updated: {config_yaml}\n")
+                sys.stderr.flush()
+
+        except ImportError:
+            sys.stderr.write(f"[FunASR Worker] Warning: yaml/json library not available for config fix\n")
+        except Exception as e:
+            sys.stderr.write(f"[FunASR Worker] Warning: failed to fix ASR config: {e}\n")
+
     vad_model_id = _normalize_model_id(vad_model_id, "VAD")
     online_model_id = _normalize_model_id(online_model_id, "Streaming ASR (Pass 1)")
     offline_model_id = _normalize_model_id(offline_model_id, "Offline ASR (Pass 2)")
     punc_model_id = _normalize_model_id(punc_model_id, "Punctuation")
 
-    def _ensure_cached(model_id: str, label: str) -> Optional[str]:
+    def _find_local_model(model_id: str, label: str, model_type: str = "asr") -> Optional[str]:
         """
-        离线模式下仅用于校验本地缓存是否存在，并返回找到的目录路径（用于日志/提示）。
+        查找本地缓存的模型路径。
+        无论是否离线模式，都会尝试查找。如果找到本地缓存，后续加载时直接使用本地路径。
 
-        重要：funasr_onnx 内部会将 model_dir 传给 funasr.AutoModel，
-        这里必须传 registry 模型 ID（如 "damo/xxx"），不能传本地目录路径，
-        否则会触发 AutoModel 的 "is not registered" 断言错误。
+        Args:
+            model_id: 模型 ID
+            label: 模型标签（用于日志）
+            model_type: 模型类型 - "vad", "asr", "punc"
         """
-        if not OFFLINE_MODE:
-            return None
-        found = resolve_local_model_path(model_id)
-        if not found:
+        # 总是尝试查找本地缓存（不再限制只在离线模式）
+        found = resolve_local_model_path(model_id, require_offline_mode=False)
+
+        if found:
+            # 根据模型类型应用不同的兼容性修复
+            if model_type == "vad":
+                _ensure_vad_compatibility(found)
+            else:
+                # ASR 和 Punc 模型都需要 token_list 和可能的 punc_list
+                _ensure_asr_compatibility(found)
+
+        if OFFLINE_MODE and not found:
             raise RuntimeError(
                 f"Offline mode enabled (MODELSCOPE_OFFLINE=1) but required {label} model is not cached: {model_id}. "
                 f"Please download the model first, or disable offline mode."
             )
         return found
 
-    # 离线模式：只校验缓存是否存在（不把本地路径传给 funasr_onnx）
-    vad_cached = _ensure_cached(vad_model_id, "VAD")
-    online_cached = _ensure_cached(online_model_id, "Streaming ASR (Pass 1)")
-    offline_cached = _ensure_cached(offline_model_id, "Offline ASR (Pass 2)")
-    punc_cached = _ensure_cached(punc_model_id, "Punctuation")
+    # 查找本地缓存（无论是否离线模式都会尝试）
+    # 如果找到本地路径，后续加载时直接使用本地路径，避免联网查询
+    vad_local_path = _find_local_model(vad_model_id, "VAD", model_type="vad")
+    online_local_path = _find_local_model(online_model_id, "Streaming ASR (Pass 1)", model_type="asr")
+    offline_local_path = _find_local_model(offline_model_id, "Offline ASR (Pass 2)", model_type="asr")
+    punc_local_path = _find_local_model(punc_model_id, "Punctuation", model_type="punc")
 
     # 1. VAD 模型: 检测语音活动
+    # 如果找到本地路径，直接使用；否则使用 model_id 让 funasr_onnx 自己下载/查找
+    vad_model_path = vad_local_path or vad_model_id
     sys.stderr.write(
         f"[FunASR Worker] Loading VAD model: {vad_model_id}"
-        + (f" (cached at {vad_cached})" if vad_cached else "")
+        + (f" (using local: {vad_local_path})" if vad_local_path else " (will download if needed)")
         + "...\n"
     )
     sys.stderr.flush()
     vad_model = Fsmn_vad(
-        model_dir=vad_model_id,
+        model_dir=vad_model_path,
         quantize=use_quantize,
         device_id=int(device_info.get("device_id", -1)),
     )
 
     # 2. Pass 1 流式模型: 快速出字
+    online_model_path = online_local_path or online_model_id
     sys.stderr.write(
         f"[FunASR Worker] Loading streaming ASR model (Pass 1): {online_model_id}"
-        + (f" (cached at {online_cached})" if online_cached else "")
+        + (f" (using local: {online_local_path})" if online_local_path else " (will download if needed)")
         + "...\n"
     )
     sys.stderr.flush()
     asr_online_model = ParaformerOnline(
-        model_dir=online_model_id,
+        model_dir=online_model_path,
         batch_size=1,
         device_id=int(device_info.get("device_id", -1)),
         quantize=use_quantize,
@@ -594,14 +763,15 @@ def load_funasr_onnx_models(gpu_config: Optional[GPUConfig] = None):
     )
 
     # 3. Pass 2 非流式模型: 高精度识别
+    offline_model_path = offline_local_path or offline_model_id
     sys.stderr.write(
         f"[FunASR Worker] Loading offline ASR model (Pass 2): {offline_model_id}"
-        + (f" (cached at {offline_cached})" if offline_cached else "")
+        + (f" (using local: {offline_local_path})" if offline_local_path else " (will download if needed)")
         + "...\n"
     )
     sys.stderr.flush()
     asr_offline_model = ParaformerOffline(
-        model_dir=offline_model_id,
+        model_dir=offline_model_path,
         batch_size=1,
         device_id=int(device_info.get("device_id", -1)),
         quantize=use_quantize,
@@ -609,14 +779,15 @@ def load_funasr_onnx_models(gpu_config: Optional[GPUConfig] = None):
     )
 
     # 4. 标点模型: 给 Pass 2 结果加标点
+    punc_model_path = punc_local_path or punc_model_id
     sys.stderr.write(
         f"[FunASR Worker] Loading punctuation model: {punc_model_id}"
-        + (f" (cached at {punc_cached})" if punc_cached else "")
+        + (f" (using local: {punc_local_path})" if punc_local_path else " (will download if needed)")
         + "...\n"
     )
     sys.stderr.flush()
     punc_model = CT_Transformer(
-        model_dir=punc_model_id,
+        model_dir=punc_model_path,
         quantize=use_quantize,
         device_id=int(device_info.get("device_id", -1)),
         intra_op_num_threads=2

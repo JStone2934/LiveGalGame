@@ -184,6 +184,49 @@ export default function ASRManager(BaseClass) {
       return info.changes > 0;
     }
 
+    // 删除 ASR 配置（保证至少保留一个配置；若删除的是默认配置，会自动选一个新的默认）
+    deleteASRConfig(id) {
+      const transaction = this.db.transaction(() => {
+        const existing = this.getASRConfigById(id);
+        if (!existing) {
+          return { ok: false, deleted: false, message: '配置不存在' };
+        }
+
+        const total = this.db.prepare('SELECT COUNT(*) as count FROM asr_configs').get().count;
+        if (total <= 1) {
+          return { ok: false, deleted: false, message: '至少需要保留一个 ASR 配置' };
+        }
+
+        const wasDefault = existing.is_default === 1;
+        const deleteStmt = this.db.prepare('DELETE FROM asr_configs WHERE id = ?');
+        const info = deleteStmt.run(id);
+
+        let newDefaultId = null;
+        if (wasDefault) {
+          // 选一个最近更新的配置作为新的默认
+          const candidate = this.db
+            .prepare('SELECT id FROM asr_configs ORDER BY updated_at DESC, created_at DESC LIMIT 1')
+            .get();
+          if (candidate?.id) {
+            this.db.prepare('UPDATE asr_configs SET is_default = 0').run();
+            this.db
+              .prepare('UPDATE asr_configs SET is_default = 1, updated_at = ? WHERE id = ?')
+              .run(Date.now(), candidate.id);
+            newDefaultId = candidate.id;
+          }
+        }
+
+        return {
+          ok: true,
+          deleted: info.changes > 0,
+          changes: info.changes,
+          newDefaultId,
+        };
+      });
+
+      return transaction();
+    }
+
     // 保存语音识别记录
     saveSpeechRecord(recordData) {
       // 验证外键约束：检查对话是否存在

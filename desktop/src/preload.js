@@ -236,6 +236,7 @@ contextBridge.exposeInMainWorld('electronAPI', {
   asrCreateConfig: (configData) => ipcRenderer.invoke('asr-create-config', configData),
   asrUpdateConfig: (id, updates) => ipcRenderer.invoke('asr-update-config', id, updates),
   asrSetDefaultConfig: (id) => ipcRenderer.invoke('asr-set-default-config', id),
+  asrDeleteConfig: (id) => ipcRenderer.invoke('asr-delete-config', id),
   asrGetAudioSources: () => ipcRenderer.invoke('asr-get-audio-sources'),
   asrCreateAudioSource: (sourceData) => ipcRenderer.invoke('asr-create-audio-source', sourceData),
   asrUpdateAudioSource: (id, updates) => ipcRenderer.invoke('asr-update-audio-source', id, updates),
@@ -252,6 +253,9 @@ contextBridge.exposeInMainWorld('electronAPI', {
   // SiliconFlow API Key 配置
   appGetSiliconflowApiKey: () => ipcRenderer.invoke('app-get-siliconflow-api-key'),
   appSetSiliconflowApiKey: (apiKey) => ipcRenderer.invoke('app-set-siliconflow-api-key', apiKey),
+  // Baidu API Key 配置
+  appGetBaiduApiKey: () => ipcRenderer.invoke('app-get-baidu-api-key'),
+  appSetBaiduApiKey: (apiKey) => ipcRenderer.invoke('app-set-baidu-api-key', apiKey),
   onAsrModelDownloadStarted: (callback) => {
     const listener = (event, payload) => callback(payload);
     ipcRenderer.on('asr-model-download-started', listener);

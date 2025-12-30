@@ -28,10 +28,19 @@ function detectPythonPath() {
     return envPython;
   }
   const projectRoot = path.resolve(app.getAppPath(), app.isPackaged ? '../..' : '.');
+
+  // 优先使用 python-env（项目标准环境）
+  const pythonEnvPy = path.join(projectRoot, 'python-env', process.platform === 'win32' ? 'Scripts' : 'bin', process.platform === 'win32' ? 'python.exe' : 'python3');
+  if (fs.existsSync(pythonEnvPy)) {
+    return pythonEnvPy;
+  }
+
+  // 回退到 .venv（兼容旧版本）
   const venvPy = path.join(projectRoot, '.venv', process.platform === 'win32' ? 'Scripts' : 'bin', process.platform === 'win32' ? 'python.exe' : 'python3');
   if (fs.existsSync(venvPy)) {
     return venvPy;
   }
+
   return process.platform === 'win32' ? 'python' : 'python3';
 }
 

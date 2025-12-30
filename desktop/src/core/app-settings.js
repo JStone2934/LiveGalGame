@@ -41,3 +41,22 @@ export function setSiliconflowApiKeySetting(apiKey) {
 export function clearSiliconflowApiKeySetting() {
   store.delete('asr.siliconflowApiKey');
 }
+
+export function getBaiduApiKeySetting() {
+  const value = store.get('asr.baiduApiKey');
+  return typeof value === 'string' && value.trim() ? value : null;
+}
+
+export function setBaiduApiKeySetting(apiKey) {
+  if (apiKey === null || apiKey === undefined || String(apiKey).trim() === '') {
+    store.delete('asr.baiduApiKey');
+    return null;
+  }
+  const normalized = String(apiKey).trim();
+  store.set('asr.baiduApiKey', normalized);
+  return normalized;
+}
+
+export function clearBaiduApiKeySetting() {
+  store.delete('asr.baiduApiKey');
+}

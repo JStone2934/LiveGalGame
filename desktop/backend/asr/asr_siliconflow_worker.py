@@ -235,7 +235,7 @@ class SiliconFlowWorker:
         """加载 FunASR 轻量级 VAD 模型（约 100MB，比完整 ASR 模型小得多）"""
         try:
             from funasr_onnx.vad_bin import Fsmn_vad
-            vad_model_id = "damo/speech_fsmn_vad_zh-cn-16k-common-onnx"
+            vad_model_id = "iic/speech_fsmn_vad_zh-cn-16k-common-onnx"
 
             self._vad_device_info = self._detect_onnx_vad_device()
             sys.stderr.write(f"[SF Worker] Host: {platform.system()} {platform.release()} ({platform.machine()})\n")

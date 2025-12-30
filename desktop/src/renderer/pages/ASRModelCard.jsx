@@ -1,3 +1,4 @@
+import { useState } from 'react';
 import { formatBytes, formatSpeed, calculateProgress, isPresetActive, engineNames } from './asrSettingsUtils';
 
 // 过滤 ANSI 转义序列
@@ -16,7 +17,20 @@ export function ASRModelCard({
   onSetActive,
   onDownload,
   onCancelDownload,
+  // SiliconFlow API Key props (optional, only for siliconflow-cloud)
+  apiKey,
+  apiKeyLoading,
+  apiKeySaving,
+  apiKeyError,
+  apiKeyNotice,
+  apiKeySupported,
+  onApiKeyChange,
+  onApiKeySave,
+  onApiKeyClear,
+  onApiKeyRefresh,
 }) {
+  const [showApiKey, setShowApiKey] = useState(false);
+  const isCloudModel = preset.id === 'siliconflow-cloud' || preset.id === 'baidu-cloud';
   const totalBytes = status.totalBytes || status.sizeBytes || preset.sizeBytes || 0;
   const downloadedBytes = status.downloadedBytes || 0;
   const percent = calculateProgress(downloadedBytes, totalBytes);
@@ -109,6 +123,73 @@ export function ASRModelCard({
                <div className="w-2 h-2 bg-blue-500 rounded-full animate-bounce"></div>
                {progressMessage || '正在准备下载...'}
             </div>
+          )}
+        </div>
+      )}
+
+      {/* API Key input (for cloud models) */}
+      {isCloudModel && apiKeySupported !== false && (
+        <div className="mt-4 pt-4 border-t border-gray-100">
+          <div className="flex items-center justify-between mb-2">
+            <span className="text-sm font-medium text-gray-700">API Key</span>
+            <button
+              onClick={onApiKeyRefresh}
+              disabled={apiKeySaving}
+              className="text-xs text-gray-500 hover:text-gray-700 disabled:text-gray-300"
+            >
+              刷新
+            </button>
+          </div>
+          {apiKeyNotice && (
+            <div className="mb-2 rounded-lg border border-blue-200 bg-blue-50 p-2 text-xs text-blue-800">
+              {apiKeyNotice}
+            </div>
+          )}
+          {apiKeyError && (
+            <div className="mb-2 rounded-lg border border-red-200 bg-red-50 p-2 text-xs text-red-700">
+              {apiKeyError}
+            </div>
+          )}
+          {apiKeyLoading ? (
+            <div className="text-xs text-gray-500">正在读取 API Key…</div>
+          ) : (
+            <>
+              <div className="relative">
+                <input
+                  type={showApiKey ? 'text' : 'password'}
+                  placeholder="请输入 SiliconFlow API Key"
+                  value={apiKey || ''}
+                  onChange={(e) => onApiKeyChange?.(e.target.value)}
+                  className="w-full rounded-lg border border-gray-300 px-3 py-2 pr-14 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+                />
+                <button
+                  type="button"
+                  onClick={() => setShowApiKey((prev) => !prev)}
+                  className="absolute right-2 top-1/2 -translate-y-1/2 rounded-md px-2 py-1 text-xs text-gray-500 hover:bg-gray-100"
+                >
+                  {showApiKey ? '隐藏' : '显示'}
+                </button>
+              </div>
+              <div className="mt-2 flex items-center gap-2">
+                <button
+                  onClick={onApiKeySave}
+                  disabled={apiKeySaving}
+                  className="rounded-lg bg-blue-600 px-3 py-1.5 text-xs font-medium text-white hover:bg-blue-700 disabled:cursor-not-allowed disabled:bg-blue-300"
+                >
+                  {apiKeySaving ? '保存中…' : '保存'}
+                </button>
+                <button
+                  onClick={onApiKeyClear}
+                  disabled={apiKeySaving}
+                  className="rounded-lg border border-gray-300 px-3 py-1.5 text-xs font-medium text-gray-700 hover:bg-gray-50 disabled:cursor-not-allowed disabled:text-gray-400"
+                >
+                  清除
+                </button>
+              </div>
+              <div className="mt-2 text-xs text-gray-500">
+                API Key 会保存在本地设置中，仅用于本机调用云端 ASR。
+              </div>
+            </>
           )}
         </div>
       )}

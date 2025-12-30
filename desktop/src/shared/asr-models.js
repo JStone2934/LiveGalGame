@@ -34,14 +34,13 @@ export const ASR_MODEL_PRESETS = [
     engine: 'funasr',
     // ONNX 模型配置 (用于 2-Pass 架构)
     onnxModels: {
-      vad: 'damo/speech_fsmn_vad_zh-cn-16k-common-onnx',
-      online: 'damo/speech_paraformer-large_asr_nat-zh-cn-16k-common-vocab8404-online-onnx',
-      offline: 'damo/speech_paraformer-large-vad-punc_asr_nat-zh-cn-16k-common-vocab8404-onnx',
-      punc: 'damo/punc_ct-transformer_zh-cn-common-vocab272727-onnx',
+      vad: 'iic/speech_fsmn_vad_zh-cn-16k-common-onnx',
+      online: 'iic/speech_paraformer-large_asr_nat-zh-cn-16k-common-vocab8404-online-onnx',
+      offline: 'iic/speech_paraformer-large-vad-punc_asr_nat-zh-cn-16k-common-vocab8404-onnx',
+      punc: 'iic/punc_ct-transformer_zh-cn-common-vocab272727-onnx',
     },
     // 用于缓存路径检测 (兼容 model-manager.js)
-    repoId: 'damo/speech_paraformer-large_asr_nat-zh-cn-16k-common-vocab8404-online-onnx',
-    modelScopeRepoId: 'iic/speech_paraformer-large_asr_nat-zh-cn-16k-common-vocab8404-online',
+    repoId: 'iic/speech_paraformer-large_asr_nat-zh-cn-16k-common-vocab8404-online-onnx',
     // 本地统计（ModelScope 缓存）: online quant ~240MB + offline quant ~247MB + punc ~274MB + VAD ~1MB ≈ 760MB
     sizeBytes: 760 * 1024 * 1024, // 约 0.76GB（INT8 量化，含 VAD/流式/离线/标点）
     recommendedSpec: '≥4 核 CPU / ≥4GB 内存',

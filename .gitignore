@@ -60,3 +60,5 @@ desktop/docs/
 # Environment variables
 .env
 .env.*
+
+desktop/.claude
