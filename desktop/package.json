@@ -1,6 +1,6 @@
 {
   "name": "livegalgame-desktop",
-  "version": "0.1.0",
+  "version": "0.1.0-beta.2",
   "description": "LiveGalGame Desktop - 实时对话辅助与学习工具",
   "type": "module",
   "main": "src/main.js",
