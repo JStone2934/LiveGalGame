@@ -1,3 +1,4 @@
+import './web/web-api.js';
 import React, { useEffect } from 'react';
 import ReactDOM from 'react-dom/client';
 import './hud.css';

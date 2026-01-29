@@ -10,6 +10,7 @@ from uuid import uuid4
 import time
 
 from fastapi import FastAPI, WebSocket, WebSocketDisconnect, UploadFile, File, HTTPException
+from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
 import uvicorn
 from starlette.websockets import WebSocketState
@@ -28,8 +29,8 @@ if not ASR_DIR.exists():
     # 回退到打包环境或其他位置
     ASR_DIR = (ASSETS_ROOT / "asr") if (ASSETS_ROOT / "asr").exists() else (PROJECT_ROOT / "asr")
 
-DEFAULT_ENGINE = os.environ.get("ASR_ENGINE", "funasr").lower()
-DEFAULT_MODEL = os.environ.get("ASR_MODEL", "funasr-paraformer")
+DEFAULT_ENGINE = os.environ.get("ASR_ENGINE", "siliconflow").lower()
+DEFAULT_MODEL = os.environ.get("ASR_MODEL", "siliconflow-cloud")
 
 # 支持的引擎列表
 SUPPORTED_ENGINES = {"funasr", "siliconflow", "baidu"}
@@ -317,6 +318,18 @@ class WorkerBridge:
 
 
 app = FastAPI()
+
+# CORS (for Web deployment)
+cors_origins_raw = os.environ.get("ASR_CORS_ORIGINS", "*")
+cors_origins = [origin.strip() for origin in cors_origins_raw.split(",") if origin.strip()]
+allow_all = not cors_origins or "*" in cors_origins
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["*"] if allow_all else cors_origins,
+    allow_credentials=False if allow_all else True,
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
 bridge: Optional[WorkerBridge] = None
 
 
@@ -463,4 +476,3 @@ if __name__ == "__main__":
                  print(f"[ASR Launcher] Script must be in {ASR_DIR}", file=sys.stderr)
 
     main()
-
