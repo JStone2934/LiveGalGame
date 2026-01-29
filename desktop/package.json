@@ -1,6 +1,6 @@
 {
   "name": "livegalgame-desktop",
-  "version": "0.1.0-beta.2",
+  "version": "0.1.0-beta.3",
   "description": "LiveGalGame Desktop - 实时对话辅助与学习工具",
   "type": "module",
   "main": "src/main.js",
@@ -83,6 +83,7 @@
       "data/**/*",
       "src/main.js",
       "src/preload.js",
+      "src/config/**/*",
       "src/core/**/*",
       "src/asr/**/*",
       "src/shared/**/*",
