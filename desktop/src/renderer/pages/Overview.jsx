@@ -112,7 +112,7 @@ function Overview() {
                 <div className={`w-4 h-4 rounded-full ${asrStatus.ready ? 'bg-green-500 animate-pulse' : 'bg-amber-500'}`} />
                 <div>
                   <h3 className="font-semibold text-slate-800">语音识别服务</h3>
-                  <p className="text-sm text-slate-500">{asrStatus.message || (asrStatus.ready ? '已就绪' : '检测中...')}</p>
+                  <p className="text-sm text-slate-500">{'演示模式 · 桌面端可用'}</p>
                 </div>
               </div>
             </div>
@@ -125,7 +125,7 @@ function Overview() {
                 <div className={`w-4 h-4 rounded-full ${llmStatus.ready ? 'bg-green-500 animate-pulse' : 'bg-amber-500'}`} />
                 <div>
                   <h3 className="font-semibold text-slate-800">AI 建议服务</h3>
-                  <p className="text-sm text-slate-500">{llmStatus.message || (llmStatus.ready ? '已就绪' : '检测中...')}</p>
+                  <p className="text-sm text-slate-500">{'演示模式 · 桌面端可用'}</p>
                 </div>
               </div>
             </div>

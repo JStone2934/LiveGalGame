@@ -43,8 +43,8 @@ function Settings() {
   };
 
   return (
-    <div className="p-8">
-      <div className="max-w-4xl mx-auto">
+    <div className="p-8 overflow-y-auto h-full">
+      <div className="max-w-4xl mx-auto pb-8">
         {/* 标题 */}
         <div className="mb-8">
           <Link
