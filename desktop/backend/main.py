@@ -12,6 +12,7 @@ import time
 from fastapi import FastAPI, WebSocket, WebSocketDisconnect, UploadFile, File, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
+from fastapi.staticfiles import StaticFiles
 import uvicorn
 from starlette.websockets import WebSocketState
 
@@ -351,6 +352,107 @@ async def health():
     return {"status": "ok", "engine": DEFAULT_ENGINE, "model": DEFAULT_MODEL}
 
 
+# ---------------------------------------------------------------------------
+# LLM API Routes (for Web deployment)
+# ---------------------------------------------------------------------------
+from pydantic import BaseModel
+from typing import List, Optional as Opt
+
+
+class SuggestionRequest(BaseModel):
+    """Request body for generating suggestions."""
+    character: dict
+    messages: List[dict]
+    character_details: Opt[dict] = None
+    user_profile: Opt[dict] = None
+    trigger_type: str = "manual"
+    previous_suggestions: Opt[List[str]] = None
+    count: int = 3
+
+
+class AffinityRequest(BaseModel):
+    """Request body for calculating affinity change."""
+    character: dict
+    selected_suggestion: str
+    affinity_delta: int
+    messages: Opt[List[dict]] = None
+
+
+@app.get("/api/llm/status")
+async def llm_status():
+    """Check LLM service status."""
+    from llm_service import LLM_API_KEY, LLM_BASE_URL, LLM_MODEL
+    has_key = bool(LLM_API_KEY)
+    return {
+        "ready": has_key,
+        "model": LLM_MODEL if has_key else None,
+        "base_url": LLM_BASE_URL if has_key else None,
+        "message": "LLM 服务已就绪" if has_key else "LLM API Key 未配置"
+    }
+
+
+@app.post("/api/llm/suggestions")
+async def generate_suggestions(req: SuggestionRequest):
+    """Generate reply suggestions based on conversation context."""
+    from llm_service import get_suggestion_service
+    
+    try:
+        service = get_suggestion_service()
+        result = await service.generate(
+            character=req.character,
+            messages=req.messages,
+            character_details=req.character_details,
+            user_profile=req.user_profile,
+            trigger_type=req.trigger_type,
+            previous_suggestions=req.previous_suggestions,
+            count=req.count
+        )
+        
+        # Convert to dict for JSON response
+        suggestions = [
+            {
+                "text": s.text,
+                "affinity_delta": s.affinity_delta,
+                "tags": s.tags
+            }
+            for s in result.suggestions
+        ]
+        
+        return {
+            "success": True,
+            "skip": result.skip,
+            "suggestions": suggestions,
+            "metadata": result.metadata
+        }
+    except Exception as e:
+        return {
+            "success": False,
+            "error": str(e),
+            "suggestions": []
+        }
+
+
+@app.post("/api/affinity/calculate")
+async def calculate_affinity(req: AffinityRequest):
+    """Calculate new affinity based on selected suggestion."""
+    try:
+        current_affinity = req.character.get("affinity", 50)
+        new_affinity = max(0, min(100, current_affinity + req.affinity_delta))
+        
+        return {
+            "success": True,
+            "previous_affinity": current_affinity,
+            "new_affinity": new_affinity,
+            "delta": req.affinity_delta,
+            "selected": req.selected_suggestion
+        }
+    except Exception as e:
+        return {
+            "success": False,
+            "error": str(e)
+        }
+
+
 @app.post("/transcribe")
 async def transcribe(file: UploadFile = File(...)):
     if not bridge:
@@ -426,6 +528,26 @@ async def ws_transcribe(websocket: WebSocket, session_id: str):
                 await websocket.close()
             except RuntimeError:
                 pass
+
+
+def mount_web_static():
+    """Optionally serve built web assets from FastAPI (for quick deployment)."""
+    static_dir_raw = os.environ.get("WEB_STATIC_DIR") or os.environ.get("ASR_WEB_STATIC_DIR")
+    if not static_dir_raw:
+        return
+
+    static_dir = Path(static_dir_raw)
+    if not static_dir.is_absolute():
+        static_dir = (PROJECT_ROOT / static_dir).resolve()
+
+    if static_dir.exists():
+        app.mount("/", StaticFiles(directory=str(static_dir), html=True), name="web")
+        print(f"[ASR API] Serving web static from {static_dir}", file=sys.stderr)
+    else:
+        print(f"[ASR API] WEB_STATIC_DIR not found: {static_dir}", file=sys.stderr)
+
+
+mount_web_static()
 
 
 def main():

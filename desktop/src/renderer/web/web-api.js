@@ -146,12 +146,75 @@ class WebASRManager {
 
   async checkReady() {
     const base = getHttpBase().replace(/\/$/, "");
-    if (!base) return false;
+    if (!base) {
+      return {
+        ready: false,
+        message: "ASR 地址未配置",
+        missingBase: true
+      };
+    }
     try {
-      const res = await fetch(`${base}/health`, { method: "GET" });
-      return res.ok;
-    } catch {
-      return false;
+      const res = await fetch(base + "/health", { method: "GET" });
+      if (!res.ok) {
+        return {
+          ready: false,
+          message: "ASR 服务不可用 (HTTP " + res.status + ")",
+          status: res.status
+        };
+      }
+      let payload = null;
+      try {
+        payload = await res.json();
+      } catch {
+        payload = null;
+      }
+      return {
+        ready: true,
+        message: "ASR 服务已就绪",
+        status: payload?.status || "ok",
+        engine: payload?.engine,
+        model: payload?.model
+      };
+    } catch (error) {
+      return {
+        ready: false,
+        message: "ASR 服务连接失败",
+        error: error?.message || "unknown"
+      };
+    }
+  }
+
+  async checkLLMReady() {
+    const base = getHttpBase().replace(/\/$/, "");
+    if (!base) {
+      return {
+        ready: false,
+        message: "API 地址未配置",
+        missingBase: true
+      };
+    }
+    try {
+      const res = await fetch(base + "/api/llm/status", { method: "GET" });
+      if (!res.ok) {
+        return {
+          ready: false,
+          message: "LLM 服务不可用 (HTTP " + res.status + ")",
+          status: res.status
+        };
+      }
+      const payload = await res.json();
+      return {
+        ready: payload.ready,
+        message: payload.message || (payload.ready ? "LLM 服务已就绪" : "LLM 服务未配置"),
+        model: payload.model,
+        base_url: payload.base_url
+      };
+    } catch (error) {
+      return {
+        ready: false,
+        message: "LLM 服务连接失败",
+        error: error?.message || "unknown"
+      };
     }
   }
 
@@ -405,6 +468,8 @@ const webApi = {
   asrCheckReady: () => asrManager.checkReady(),
   asrStart: (conversationId) => asrManager.start(conversationId),
   asrStop: () => asrManager.stop(),
+
+  llmCheckReady: () => asrManager.checkLLMReady(),
 
   asrGetConfigs: () => clone(loadState().asrConfigs),
   asrCreateConfig: (configData) => updateState((state) => {
@@ -716,9 +781,126 @@ const webApi = {
     return clone(state.suggestionConfig);
   }),
 
-  generateLLMSuggestions: async () => ({ suggestions: [], metadata: { source: "web" } }),
+  generateLLMSuggestions: async (payload = {}) => {
+    const base = getHttpBase().replace(/\/$/, "");
+    if (!base) {
+      return { suggestions: [], metadata: { source: "web", error: "API 地址未配置" } };
+    }
+
+    try {
+      // Build request body
+      const state = loadState();
+      const conversationId = payload.conversationId;
+      const conversation = conversationId
+        ? state.conversations.find((c) => c.id === conversationId)
+        : null;
+      const characterId = payload.characterId || conversation?.character_id;
+      const character = characterId
+        ? state.characters.find((c) => c.id === characterId)
+        : null;
+      const characterDetails = characterId ? state.characterDetails[characterId] : null;
+
+      // Get recent messages
+      const messages = conversationId
+        ? state.messages
+            .filter((m) => m.conversation_id === conversationId)
+            .sort((a, b) => (a.timestamp || 0) - (b.timestamp || 0))
+            .slice(-20)
+        : [];
+
+      if (!character) {
+        return { suggestions: [], metadata: { source: "web", error: "角色未找到" } };
+      }
+
+      const res = await fetch(`${base}/api/llm/suggestions`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          character,
+          messages,
+          character_details: characterDetails,
+          user_profile: payload.userProfile || null,
+          trigger_type: payload.triggerType || "manual",
+          previous_suggestions: payload.previousSuggestions || null,
+          count: payload.count || 3
+        })
+      });
+
+      if (!res.ok) {
+        return { suggestions: [], metadata: { source: "web", error: `HTTP ${res.status}` } };
+      }
+
+      const data = await res.json();
+      if (data.skip) {
+        return { suggestions: [], skip: true, metadata: { source: "web", ...data.metadata } };
+      }
+
+      // Transform suggestions to match desktop format
+      const suggestions = (data.suggestions || []).map((s, idx) => ({
+        id: `web-${Date.now()}-${idx}`,
+        text: s.text,
+        affinity_delta: s.affinity_delta,
+        tags: s.tags || [],
+        timestamp: Date.now()
+      }));
+
+      return { suggestions, metadata: { source: "web", ...data.metadata } };
+    } catch (error) {
+      console.error("[WebAPI] generateLLMSuggestions error:", error);
+      return { suggestions: [], metadata: { source: "web", error: error?.message || "unknown" } };
+    }
+  },
+
   detectTopicShift: async () => ({ shift: false }),
-  selectActionSuggestion: async () => ({ success: true }),
+
+  selectActionSuggestion: async (payload = {}) => {
+    const base = getHttpBase().replace(/\/$/, "");
+    if (!base || !payload.suggestion) {
+      return { success: false };
+    }
+
+    try {
+      const res = await fetch(`${base}/api/affinity/calculate`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          character: payload.character || {},
+          selected_suggestion: payload.suggestion.text || "",
+          affinity_delta: payload.suggestion.affinity_delta || 0,
+          messages: payload.messages || []
+        })
+      });
+
+      if (!res.ok) {
+        return { success: false, error: `HTTP ${res.status}` };
+      }
+
+      const data = await res.json();
+
+      // Update local character affinity if successful
+      if (data.success && payload.characterId) {
+        updateState((state) => {
+          const character = state.characters.find((c) => c.id === payload.characterId);
+          if (character) {
+            character.affinity = data.new_affinity;
+            character.updated_at = Date.now();
+          }
+          return true;
+        });
+        eventBus.emit("affinity-changed", {
+          characterId: payload.characterId,
+          previous: data.previous_affinity,
+          current: data.new_affinity,
+          delta: data.delta
+        });
+      }
+
+      return { success: data.success, ...data };
+    } catch (error) {
+      console.error("[WebAPI] selectActionSuggestion error:", error);
+      return { success: false, error: error?.message || "unknown" };
+    }
+  },
 
   telemetryTrack: async () => ({ ok: true }),
 

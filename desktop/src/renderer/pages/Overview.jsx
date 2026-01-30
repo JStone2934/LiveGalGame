@@ -58,15 +58,6 @@ function Overview() {
     }
   };
 
-  const handleShowHUD = () => {
-    if (window.electronAPI?.showHUD) {
-      window.electronAPI.showHUD();
-    } else {
-      console.error('electronAPI.showHUD not available');
-      alert('electronAPI.showHUD 不可用');
-    }
-  };
-
   const formatDate = (dateString) => {
     const date = new Date(dateString);
     const daysAgo = Math.floor((Date.now() - date.getTime()) / (1000 * 60 * 60 * 24));
@@ -189,13 +180,13 @@ function Overview() {
               </div>
             </div>
             <div className="flex items-center gap-2">
-              <button
-                onClick={handleShowHUD}
+              <Link
+                to="/live"
                 className="btn-hud flex min-w-[84px] items-center justify-center gap-2 overflow-hidden rounded-full h-11 px-5 border border-primary text-primary text-sm font-bold leading-normal tracking-[0.015em] hover:bg-primary-subtle-light/50 dark:hover:bg-primary-subtle-dark/50 transition-colors"
               >
                 <span className="material-symbols-outlined text-base">support_agent</span>
                 <span className="truncate">实时助手</span>
-              </button>
+              </Link>
               <Link
                 to="/conversations"
                 className="btn-new-conversation flex min-w-[84px] items-center justify-center gap-2 overflow-hidden rounded-full h-11 px-5 bg-primary text-white text-sm font-bold leading-normal tracking-[0.015em] hover:opacity-90 transition-opacity"
