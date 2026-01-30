@@ -11,7 +11,7 @@ import time
 
 from fastapi import FastAPI, WebSocket, WebSocketDisconnect, UploadFile, File, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
-from fastapi.responses import JSONResponse
+from fastapi.responses import JSONResponse, FileResponse
 from fastapi.staticfiles import StaticFiles
 import uvicorn
 from starlette.websockets import WebSocketState
@@ -541,7 +541,35 @@ def mount_web_static():
         static_dir = (PROJECT_ROOT / static_dir).resolve()
 
     if static_dir.exists():
-        app.mount("/", StaticFiles(directory=str(static_dir), html=True), name="web")
+        # Mount static files at /static to avoid conflicts with API routes
+        app.mount("/assets", StaticFiles(directory=str(static_dir)), name="assets")
+        
+        # Serve index.html for SPA routes
+        @app.get("/")
+        async def serve_index():
+            index_path = static_dir / "index.html"
+            if index_path.exists():
+                return FileResponse(index_path, media_type="text/html")
+            raise HTTPException(status_code=404, detail="index.html not found")
+        
+        # Serve static files directly (js, css, etc.)
+        @app.get("/{filename:path}")
+        async def serve_static(filename: str):
+            # Skip API and WebSocket routes
+            if filename.startswith(("api/", "ws/", "health", "transcribe")):
+                raise HTTPException(status_code=404)
+            
+            file_path = static_dir / filename
+            if file_path.exists() and file_path.is_file():
+                return FileResponse(file_path)
+            
+            # For SPA: return index.html for non-file routes
+            index_path = static_dir / "index.html"
+            if index_path.exists():
+                return FileResponse(index_path, media_type="text/html")
+            
+            raise HTTPException(status_code=404, detail="Not found")
+        
         print(f"[ASR API] Serving web static from {static_dir}", file=sys.stderr)
     else:
         print(f"[ASR API] WEB_STATIC_DIR not found: {static_dir}", file=sys.stderr)
