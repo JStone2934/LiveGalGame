@@ -5,7 +5,9 @@
 @layer base {
   :root {
     --primary: #c51662;
-    /* ... other vars ... */
+    --primary-rgb: 197, 22, 98;
+    --background: 240 20% 4%;
+    --foreground: 0 0% 100%;
   }
 
   html, body {
@@ -14,7 +16,7 @@
     padding: 0;
     width: 100%;
     height: 100%;
-    overflow: hidden; /* Prevent scrollbars on the window itself */
+    overflow: hidden;
     background: transparent;
   }
 
@@ -28,3 +30,86 @@
   }
 }
 
+@layer utilities {
+  /* 玻璃态效果 */
+  .glass {
+    @apply backdrop-blur-xl bg-white/[0.03] border border-white/[0.06];
+  }
+
+  .glass-dark {
+    @apply backdrop-blur-xl bg-black/40 border border-white/[0.06];
+  }
+
+  /* 渐变文字 */
+  .text-gradient {
+    @apply bg-clip-text text-transparent;
+    background-image: linear-gradient(135deg, #c51662 0%, #ec4899 100%);
+  }
+
+  /* 发光效果 */
+  .glow-primary {
+    box-shadow: 0 0 40px rgba(197, 22, 98, 0.15);
+  }
+
+  .glow-primary-strong {
+    box-shadow: 0 0 60px rgba(197, 22, 98, 0.3);
+  }
+
+  /* 悬浮上移 */
+  .hover-lift {
+    @apply transition-all duration-300;
+  }
+
+  .hover-lift:hover {
+    transform: translateY(-2px);
+  }
+}
+
+/* 自定义滚动条 - 深色主题 */
+::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+::-webkit-scrollbar-thumb {
+  background: rgba(255, 255, 255, 0.1);
+  border-radius: 4px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: rgba(255, 255, 255, 0.2);
+}
+
+/* 选中文本 */
+::selection {
+  background: rgba(197, 22, 98, 0.3);
+  color: white;
+}
+
+/* 声波动画 */
+@keyframes wave {
+  0%, 100% {
+    height: 8px;
+  }
+  50% {
+    height: 24px;
+  }
+}
+
+/* 脉冲发光动画 */
+@keyframes pulse-glow {
+  0%, 100% {
+    box-shadow: 0 0 20px rgba(197, 22, 98, 0.3);
+  }
+  50% {
+    box-shadow: 0 0 40px rgba(197, 22, 98, 0.6);
+  }
+}
+
+.animate-pulse-glow {
+  animation: pulse-glow 2s ease-in-out infinite;
+}
