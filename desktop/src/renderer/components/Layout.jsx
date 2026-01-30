@@ -204,7 +204,7 @@ function Layout({ children }) {
         flex: 1,
         display: 'flex',
         borderRadius: '24px',
-        overflow: 'hidden',
+        overflow: 'visible',
         backgroundColor: '#f8f6f7',
         position: 'relative',
         border: '1px solid rgba(255,255,255,0.5)'
