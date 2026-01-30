@@ -121,13 +121,21 @@ export default function LiveAssistant() {
   useEffect(() => {
     const checkServices = async () => {
       const api = window.electronAPI;
-      if (!api) return;
+      const isElectron = !!(api?.isElectron);
+      
+      // Web 预览模式：直接设为演示就绪状态
+      if (!isElectron) {
+        setAsrStatus({ ready: true, message: '演示模式' });
+        setLlmStatus({ ready: true, message: '演示模式' });
+        return;
+      }
 
+      // Electron 桌面端：正常检测服务
+      if (!api) return;
       if (api.asrCheckReady) {
         const asr = await api.asrCheckReady();
         setAsrStatus(asr);
       }
-
       if (api.llmCheckReady) {
         const llm = await api.llmCheckReady();
         setLlmStatus(llm);
