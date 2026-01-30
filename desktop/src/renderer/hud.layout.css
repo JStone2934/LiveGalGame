@@ -204,7 +204,7 @@ body {
   font-weight: 700;
   text-transform: uppercase;
   letter-spacing: 0.5px;
-  color: #974e6e;
+  color: #8c4a6b;
 }
 
 .transcript-area {
@@ -212,7 +212,7 @@ body {
   max-height: 170px;
   padding: 10px;
   border-radius: 14px;
-  background: rgba(15, 23, 42, 0.04);
+  background: rgba(15, 23, 42, 0.08);
   border: 1px solid rgba(15, 23, 42, 0.1);
   overflow-y: auto;
   display: flex;

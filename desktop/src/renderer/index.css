@@ -33,11 +33,11 @@
 @layer utilities {
   /* 玻璃态效果 */
   .glass {
-    @apply backdrop-blur-xl bg-white/[0.03] border border-white/[0.06];
+    @apply backdrop-blur-md bg-white/[0.06] border border-white/[0.12];
   }
 
   .glass-dark {
-    @apply backdrop-blur-xl bg-black/40 border border-white/[0.06];
+    @apply backdrop-blur-md bg-black/50 border border-white/[0.12];
   }
 
   /* 渐变文字 */

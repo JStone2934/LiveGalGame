@@ -17,7 +17,7 @@ export const TranscriptView = ({
       return (
         <div className="flex flex-col items-center justify-center py-12">
           <div className="w-8 h-8 border-2 border-primary/30 border-t-primary rounded-full animate-spin mb-4" />
-          <p className="text-sm text-zinc-500">加载中...</p>
+          <p className="text-sm text-zinc-300">加载中...</p>
         </div>
       );
     }
@@ -42,11 +42,11 @@ export const TranscriptView = ({
       return (
         <div className="flex flex-col items-center justify-center py-16 text-center">
           <div className="w-16 h-16 rounded-2xl bg-white/5 flex items-center justify-center mb-4">
-            <span className="material-symbols-outlined text-3xl text-zinc-600">
+            <span className="material-symbols-outlined text-3xl text-zinc-400">
               {isListening ? 'chat_bubble' : 'mic_off'}
             </span>
           </div>
-          <p className="text-sm text-zinc-500">
+          <p className="text-sm text-zinc-300">
             {isListening 
               ? (isNew ? '新对话，开始聊天吧！' : '该对话还没有消息') 
               : '点击下方麦克风按钮开始监听'
@@ -75,7 +75,7 @@ export const TranscriptView = ({
                 }`}
               >
                 {/* 发言者标签 */}
-                <div className={`text-xs mb-1 ${isUser ? 'text-white/70' : 'text-zinc-500'}`}>
+                <div className={`text-xs mb-1 ${isUser ? 'text-white/80' : 'text-zinc-300'}`}>
                   {isUser ? '你' : (msg.sender_name || '对方')}
                 </div>
                 {/* 消息内容 */}
@@ -84,7 +84,7 @@ export const TranscriptView = ({
                 </p>
                 {/* 时间戳 */}
                 {msg.timestamp && (
-                  <div className={`text-[10px] mt-1.5 ${isUser ? 'text-white/50' : 'text-zinc-600'}`}>
+                  <div className={`text-[10px] mt-1.5 ${isUser ? 'text-white/60' : 'text-zinc-400'}`}>
                     {new Date(msg.timestamp).toLocaleTimeString('zh-CN', { 
                       hour: '2-digit', 
                       minute: '2-digit' 

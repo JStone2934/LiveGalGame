@@ -69,24 +69,24 @@ export const SuggestionsPanel = ({
         {suggestionStatus === 'loading' && (
           <div className="flex flex-col items-center py-8">
             <div className="w-6 h-6 border-2 border-primary/30 border-t-primary rounded-full animate-spin mb-3" />
-            <p className="text-sm text-zinc-500">正在生成个性化建议…</p>
+            <p className="text-sm text-zinc-300">正在生成个性化建议…</p>
           </div>
         )}
 
         {isStreaming && generatedCount === 0 && (
           <div className="flex flex-col items-center py-8">
             <div className="w-6 h-6 border-2 border-primary/30 border-t-primary rounded-full animate-spin mb-3" />
-            <p className="text-sm text-zinc-500">正在流式生成，请稍候…</p>
+            <p className="text-sm text-zinc-300">正在流式生成，请稍候…</p>
           </div>
         )}
 
         {!isStreaming && suggestionStatus !== 'loading' && suggestions.length === 0 && (
           <div className="flex flex-col items-center py-8 text-center">
             <div className="w-12 h-12 rounded-xl bg-white/5 flex items-center justify-center mb-3">
-              <span className="material-symbols-outlined text-2xl text-zinc-600">lightbulb</span>
+              <span className="material-symbols-outlined text-2xl text-zinc-400">lightbulb</span>
             </div>
-            <p className="text-sm text-zinc-500">暂无建议</p>
-            <p className="text-xs text-zinc-600 mt-1">点击刷新按钮或等待系统自动推荐</p>
+            <p className="text-sm text-zinc-300">暂无建议</p>
+            <p className="text-xs text-zinc-400 mt-1">点击刷新按钮或等待系统自动推荐</p>
           </div>
         )}
 
@@ -102,7 +102,7 @@ export const SuggestionsPanel = ({
                   ? 'bg-primary/20 border-primary/40' 
                   : isCopied 
                     ? 'bg-emerald-500/20 border-emerald-500/40' 
-                    : 'bg-white/[0.03] border-white/10 hover:bg-white/[0.06] hover:border-white/20'
+                    : 'bg-white/[0.05] border-white/15 hover:bg-white/[0.06] hover:border-white/20'
               }`}
               key={suggestion.id}
               role="button"
@@ -140,7 +140,7 @@ export const SuggestionsPanel = ({
                       <div className="flex gap-1 flex-wrap">
                         {suggestion.tags.map((tag) => (
                           <span 
-                            className="px-1.5 py-0.5 rounded text-[10px] bg-white/10 text-zinc-400" 
+                            className="px-1.5 py-0.5 rounded text-xs bg-white/15 text-zinc-400" 
                             key={`${suggestion.id}-${tag}`}
                           >
                             {tag}
@@ -158,7 +158,7 @@ export const SuggestionsPanel = ({
                 <div className="flex gap-1 flex-wrap mt-2">
                   {suggestion.tags.map((tag) => (
                     <span 
-                      className="px-1.5 py-0.5 rounded text-[10px] bg-white/10 text-zinc-400" 
+                      className="px-1.5 py-0.5 rounded text-xs bg-white/15 text-zinc-400" 
                       key={`${suggestion.id}-${tag}`}
                     >
                       {tag}
@@ -170,8 +170,8 @@ export const SuggestionsPanel = ({
               {/* 亲和度预测 */}
               {typeof suggestion.affinity_prediction === 'number' && (
                 <div className="mt-3 flex items-center gap-2">
-                  <span className="text-xs text-zinc-500">接受度</span>
-                  <div className="flex-1 h-1.5 bg-white/10 rounded-full overflow-hidden">
+                  <span className="text-xs text-zinc-300">接受度</span>
+                  <div className="flex-1 h-1.5 bg-white/15 rounded-full overflow-hidden">
                     <div 
                       className={`h-full rounded-full transition-all ${
                         suggestion.affinity_prediction >= 8 ? 'bg-emerald-500' :
@@ -216,7 +216,7 @@ export const SuggestionsPanel = ({
         {isStreaming && generatedCount > 0 && (!expectedCount || generatedCount < expectedCount) && (
           <div className="flex items-center justify-center py-4 gap-2">
             <div className="w-4 h-4 border-2 border-primary/30 border-t-primary rounded-full animate-spin" />
-            <span className="text-xs text-zinc-500">继续生成中…</span>
+            <span className="text-xs text-zinc-300">继续生成中…</span>
           </div>
         )}
       </div>
@@ -224,7 +224,7 @@ export const SuggestionsPanel = ({
       {/* 换一批按钮 */}
       {suggestions.length > 0 && !isStreaming && suggestionStatus !== 'loading' && (
         <button
-          className="w-full py-2.5 rounded-xl bg-white/5 border border-white/10 text-zinc-400 text-sm font-medium hover:bg-white/10 hover:text-white transition-colors disabled:opacity-50"
+          className="w-full py-2.5 rounded-xl bg-white/5 border border-white/15 text-zinc-400 text-sm font-medium hover:bg-white/15 hover:text-white transition-colors disabled:opacity-50"
           onClick={() => onGenerate({ trigger: 'manual', reason: 'refresh' })}
           disabled={suggestionStatus === 'loading' || suggestionStatus === 'streaming'}
         >
