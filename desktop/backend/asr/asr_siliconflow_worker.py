@@ -81,6 +81,11 @@ SENTENCE_END_PUNCT = set("。！？!?.；;")
 def decode_audio_chunk(audio_b64: str) -> np.ndarray:
     """Base64 -> float32 PCM"""
     audio_bytes = base64.b64decode(audio_b64)
+    if len(audio_bytes) % 2 != 0:
+        # Avoid crashing on odd-length frames; drop the last byte.
+        audio_bytes = audio_bytes[:-1]
+    if not audio_bytes:
+        return np.array([], dtype=np.float32)
     audio_int16 = np.frombuffer(audio_bytes, dtype=np.int16)
     return audio_int16.astype(np.float32)
 
@@ -314,7 +319,17 @@ class SiliconFlowWorker:
         if state.start_time_ms == 0:
             state.start_time_ms = timestamp_ms
 
-        chunk = decode_audio_chunk(audio_b64)
+        try:
+            chunk = decode_audio_chunk(audio_b64)
+        except Exception as exc:
+            send_ipc_message({
+                "request_id": request_id,
+                "session_id": session_id,
+                "status": "error",
+                "error": f"Invalid audio_data: {exc}",
+                "engine": "siliconflow",
+            })
+            return
         if chunk.size == 0:
             return
 
@@ -402,10 +417,32 @@ class SiliconFlowWorker:
         seg_seq: Optional[int],
     ):
         """并行发送多个冗余请求，取最快返回的结果"""
-        import requests
-        
-        t0 = time.time()
-        wav_bytes = pcm_to_wav_bytes(audio_f32, sample_rate)
+        try:
+            import requests
+        except Exception as exc:
+            send_ipc_message({
+                "request_id": request_id,
+                "session_id": session_id or request_id,
+                "status": "error",
+                "error": f"requests import failed: {exc}",
+                "trigger": trigger,
+                "engine": "siliconflow",
+            })
+            return
+
+        try:
+            t0 = time.time()
+            wav_bytes = pcm_to_wav_bytes(audio_f32, sample_rate)
+        except Exception as exc:
+            send_ipc_message({
+                "request_id": request_id,
+                "session_id": session_id or request_id,
+                "status": "error",
+                "error": f"Failed to build wav: {exc}",
+                "trigger": trigger,
+                "engine": "siliconflow",
+            })
+            return
         
         def single_request(replica_id: int):
             """单个 API 请求"""
@@ -544,20 +581,32 @@ def main():
             except json.JSONDecodeError:
                 continue
 
-            req_type = data.get("type")
-            if req_type == "reset_session":
-                worker.reset_session(data.get("session_id", ""))
-            elif req_type == "force_commit":
-                worker.handle_force_commit(data)
-            elif req_type == "streaming_chunk":
-                worker.handle_streaming_chunk(data)
-            elif req_type == "batch_file" or "audio_path" in data:
-                worker.handle_batch_file(data)
-            else:
+            try:
+                req_type = data.get("type")
+                if req_type == "reset_session":
+                    worker.reset_session(data.get("session_id", ""))
+                elif req_type == "force_commit":
+                    worker.handle_force_commit(data)
+                elif req_type == "streaming_chunk":
+                    worker.handle_streaming_chunk(data)
+                elif req_type == "batch_file" or "audio_path" in data:
+                    worker.handle_batch_file(data)
+                else:
+                    send_ipc_message({
+                        "request_id": data.get("request_id", "unknown"),
+                        "status": "error",
+                        "error": f"Unknown request type: {req_type}"
+                    })
+            except Exception as exc:
+                sys.stderr.write(f"[SF Worker] Request handling error: {exc}\n")
+                sys.stderr.write(traceback.format_exc())
+                sys.stderr.flush()
                 send_ipc_message({
                     "request_id": data.get("request_id", "unknown"),
+                    "session_id": data.get("session_id", ""),
                     "status": "error",
-                    "error": f"Unknown request type: {req_type}"
+                    "error": f"Worker handler error: {exc}",
+                    "engine": "siliconflow",
                 })
                 
     except Exception as exc:
@@ -570,4 +619,3 @@ def main():
 
 if __name__ == "__main__":
     main()
-

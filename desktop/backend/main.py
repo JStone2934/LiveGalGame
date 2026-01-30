@@ -115,6 +115,18 @@ class WorkerBridge:
         self.ready_event = asyncio.Event()
         self.ws_clients: Dict[str, WebSocket] = {}
         self.pending_requests: Dict[str, asyncio.Future] = {}
+        self._restart_lock = asyncio.Lock()
+
+    def _is_running(self) -> bool:
+        return self.process is not None and self.process.returncode is None
+
+    def _fail_pending_requests(self, reason: str):
+        if not self.pending_requests:
+            return
+        for request_id, fut in list(self.pending_requests.items()):
+            if not fut.done():
+                fut.set_exception(RuntimeError(reason))
+        self.pending_requests.clear()
 
     def _worker_script_path(self, packaged: bool) -> Path:
         """获取 worker 脚本路径（统一使用 Python 解释器启动，而非独立可执行文件）。"""
@@ -130,8 +142,10 @@ class WorkerBridge:
         return base_dir / "asr_worker.py"
 
     async def start(self):
-        if self.process:
+        if self.process and self.process.returncode is None:
             return
+        if self.process:
+            await self.stop()
 
         print(f"[WorkerBridge] engine={self.engine}, model={self.model}", file=sys.stderr)
         print(f"[WorkerBridge] is_packaged={is_packaged()}", file=sys.stderr)
@@ -177,6 +191,7 @@ class WorkerBridge:
         print(f"[WorkerBridge] Spawning worker subprocess...", file=sys.stderr)
         sys.stderr.flush()
 
+        self.ready_event.clear()
         self.process = await asyncio.create_subprocess_exec(
             python_cmd,
             str(worker_path),
@@ -236,6 +251,8 @@ class WorkerBridge:
         print(f"[WorkerBridge] Worker stdout closed (process exited)", file=sys.stderr)
         if self.process:
             print(f"[WorkerBridge] Process returncode={self.process.returncode}", file=sys.stderr)
+        self.ready_event.clear()
+        self._fail_pending_requests("ASR worker exited")
         sys.stderr.flush()
 
     async def _consume_stderr(self):
@@ -263,6 +280,14 @@ class WorkerBridge:
             sys.stderr.flush()
             raise RuntimeError("ASR worker did not become ready in time") from exc
 
+    async def restart(self, reason: str):
+        async with self._restart_lock:
+            print(f"[WorkerBridge] Restarting worker: {reason}", file=sys.stderr)
+            sys.stderr.flush()
+            await self.stop()
+            await self.start()
+            await self.ensure_ready()
+
     async def stop(self):
         if self.process:
             # 进程可能已提前退出，先检查 returncode，避免重复 terminate 触发 ProcessLookupError
@@ -283,13 +308,23 @@ class WorkerBridge:
         self.process = None
         self.stdout_task = None
         self.ready_event.clear()
+        self._fail_pending_requests("ASR worker stopped")
 
     async def send(self, payload: dict):
+        if not self._is_running():
+            await self.restart("send() called but worker not running")
         if not self.process or not self.process.stdin:
             raise RuntimeError("Worker process is not running")
         data = json.dumps(payload, ensure_ascii=False) + "\n"
-        self.process.stdin.write(data.encode("utf-8"))
-        await self.process.stdin.drain()
+        try:
+            self.process.stdin.write(data.encode("utf-8"))
+            await self.process.stdin.drain()
+        except (BrokenPipeError, ConnectionResetError, OSError) as exc:
+            await self.restart(f"pipe error: {exc}")
+            if not self.process or not self.process.stdin:
+                raise RuntimeError("Worker process restart failed") from exc
+            self.process.stdin.write(data.encode("utf-8"))
+            await self.process.stdin.drain()
 
     async def force_commit(self, session_id: str):
         await self.send({"type": "force_commit", "session_id": session_id})
@@ -480,7 +515,11 @@ async def ws_transcribe(websocket: WebSocket, session_id: str):
         await websocket.close(code=1011)
         return
 
-    await bridge.ensure_ready()
+    try:
+        await bridge.ensure_ready()
+    except Exception:
+        await websocket.close(code=1011)
+        return
     await websocket.accept()
     bridge.bind_ws(session_id, websocket)
 
@@ -494,15 +533,18 @@ async def ws_transcribe(websocket: WebSocket, session_id: str):
             if message.get("bytes") is not None:
                 audio_bytes: bytes = message["bytes"]
                 audio_b64 = base64.b64encode(audio_bytes).decode("ascii")
-                await bridge.send(
-                    {
-                        "type": "streaming_chunk",
-                        "session_id": session_id,
-                        "audio_data": audio_b64,
-                        "timestamp": int(time.time() * 1000),
-                        "is_final": False,
-                    }
-                )
+                try:
+                    await bridge.send(
+                        {
+                            "type": "streaming_chunk",
+                            "session_id": session_id,
+                            "audio_data": audio_b64,
+                            "timestamp": int(time.time() * 1000),
+                            "is_final": False,
+                        }
+                    )
+                except Exception:
+                    break
             elif message.get("text"):
                 try:
                     payload = json.loads(message["text"])
@@ -511,9 +553,15 @@ async def ws_transcribe(websocket: WebSocket, session_id: str):
 
                 msg_type = payload.get("type")
                 if msg_type == "force_commit":
-                    await bridge.force_commit(session_id)
+                    try:
+                        await bridge.force_commit(session_id)
+                    except Exception:
+                        break
                 elif msg_type == "reset_session":
-                    await bridge.reset_session(session_id)
+                    try:
+                        await bridge.reset_session(session_id)
+                    except Exception:
+                        break
     except WebSocketDisconnect:
         pass
     finally:
