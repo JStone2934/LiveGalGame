@@ -52,8 +52,8 @@ def send_ipc_message(data: dict):
 # 配置
 # ==============================================================================
 API_URL = "https://api.siliconflow.cn/v1/audio/transcriptions"
-_SF_API_KEY_OBFUSCATED = "c2staWJndG9zZmhuYmZxbmlueWVtYnRvY3B2eGJ2aG1qb3JuemJsZWZteWxlamd2a2xr"
-API_KEY = os.environ.get("SILICONFLOW_API_KEY", base64.b64decode(_SF_API_KEY_OBFUSCATED).decode()).strip()
+# 安全：API Key 必须通过环境变量传入，不再硬编码备用 Key
+API_KEY = os.environ.get("SILICONFLOW_API_KEY", "").strip()
 MODEL_NAME = os.environ.get("SILICONFLOW_MODEL", "TeleAI/TeleSpeechASR").strip()
 
 SAMPLE_RATE = int(os.environ.get("ASR_SAMPLE_RATE", "16000"))
@@ -417,6 +417,18 @@ class SiliconFlowWorker:
         seg_seq: Optional[int],
     ):
         """并行发送多个冗余请求，取最快返回的结果"""
+        # 检查 API Key 是否配置
+        if not API_KEY:
+            send_ipc_message({
+                "request_id": request_id,
+                "session_id": session_id or request_id,
+                "status": "error",
+                "error": "SiliconFlow API Key 未配置，请在服务器环境变量中设置 SILICONFLOW_API_KEY",
+                "trigger": trigger,
+                "engine": "siliconflow",
+            })
+            return
+
         try:
             import requests
         except Exception as exc:

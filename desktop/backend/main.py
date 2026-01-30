@@ -488,6 +488,79 @@ async def calculate_affinity(req: AffinityRequest):
         }
 
 
+# ---------------------------------------------------------------------------
+# SiliconFlow ASR Proxy (保护 API Key 不暴露给前端)
+# ---------------------------------------------------------------------------
+import httpx
+
+SILICONFLOW_API_URL = "https://api.siliconflow.cn/v1/audio/transcriptions"
+SILICONFLOW_API_KEY = os.environ.get("SILICONFLOW_API_KEY", "").strip()
+SILICONFLOW_MODEL = os.environ.get("SILICONFLOW_MODEL", "TeleAI/TeleSpeechASR").strip()
+
+
+@app.post("/api/asr/proxy")
+async def asr_proxy(file: UploadFile = File(...)):
+    """
+    ASR 代理端点：前端上传音频，服务器转发到 SiliconFlow。
+    API Key 保存在服务器端，前端无法获取。
+    """
+    if not SILICONFLOW_API_KEY:
+        raise HTTPException(status_code=500, detail="SiliconFlow API Key 未配置")
+    
+    # 读取上传的音频文件
+    content = await file.read()
+    if not content:
+        raise HTTPException(status_code=400, detail="音频文件为空")
+    
+    # 限制文件大小（10MB）
+    if len(content) > 10 * 1024 * 1024:
+        raise HTTPException(status_code=400, detail="音频文件过大，最大 10MB")
+    
+    # 获取文件类型
+    content_type = file.content_type or "audio/wav"
+    filename = file.filename or "audio.wav"
+    
+    try:
+        async with httpx.AsyncClient(timeout=60.0) as client:
+            response = await client.post(
+                SILICONFLOW_API_URL,
+                headers={"Authorization": f"Bearer {SILICONFLOW_API_KEY}"},
+                data={"model": SILICONFLOW_MODEL},
+                files={"file": (filename, content, content_type)},
+            )
+            
+            if response.status_code != 200:
+                error_text = response.text[:500]
+                print(f"[ASR Proxy] SiliconFlow error: {response.status_code} - {error_text}", file=sys.stderr)
+                raise HTTPException(
+                    status_code=response.status_code,
+                    detail=f"SiliconFlow API 错误: {error_text}"
+                )
+            
+            result = response.json()
+            return {
+                "success": True,
+                "text": result.get("text", ""),
+                "language": result.get("language", "zh"),
+            }
+    except httpx.TimeoutException:
+        raise HTTPException(status_code=504, detail="SiliconFlow API 超时")
+    except httpx.RequestError as e:
+        print(f"[ASR Proxy] Request error: {e}", file=sys.stderr)
+        raise HTTPException(status_code=502, detail=f"请求失败: {str(e)}")
+
+
+@app.get("/api/asr/status")
+async def asr_status():
+    """检查 ASR 代理服务状态"""
+    return {
+        "ready": bool(SILICONFLOW_API_KEY),
+        "engine": "siliconflow-proxy",
+        "model": SILICONFLOW_MODEL if SILICONFLOW_API_KEY else None,
+        "message": "ASR 代理服务已就绪" if SILICONFLOW_API_KEY else "SiliconFlow API Key 未配置"
+    }
+
+
 @app.post("/transcribe")
 async def transcribe(file: UploadFile = File(...)):
     if not bridge:
