@@ -42,14 +42,20 @@ function Overview() {
         setConversations(filtered);
       }
 
-      // 检查服务状态
-      if (api.asrCheckReady) {
-        const asr = await api.asrCheckReady();
-        setAsrStatus(asr);
-      }
-      if (api.llmCheckReady) {
-        const llm = await api.llmCheckReady();
-        setLlmStatus(llm);
+      // 检查服务状态（仅 Electron 桌面端）
+      if (isElectron) {
+        if (api.asrCheckReady) {
+          const asr = await api.asrCheckReady();
+          setAsrStatus(asr);
+        }
+        if (api.llmCheckReady) {
+          const llm = await api.llmCheckReady();
+          setLlmStatus(llm);
+        }
+      } else {
+        // Web 预览模式：设为演示状态
+        setAsrStatus({ ready: true, message: '演示模式' });
+        setLlmStatus({ ready: true, message: '演示模式' });
       }
     } catch (error) {
       console.error('Failed to load data:', error);
